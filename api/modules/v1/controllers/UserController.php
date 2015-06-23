@@ -3,6 +3,7 @@ namespace api\modules\v1\controllers;
 use Yii;
 use yii\rest\ActiveController;
 use api\modules\v1\models\User;
+use \mongosoft\soapclient\Client;
 
 /**
  * User Controller API
@@ -82,7 +83,7 @@ class UserController extends AuthController
 
         $post = Yii::$app->request->post();
         $response = array();
-        $response['code'] = "200";
+
 
         $post = Yii::$app->request->post();
 
@@ -100,6 +101,10 @@ class UserController extends AuthController
         $model = new User();
         $c= $this->ociConnect();
         $response['data'] = $model->getCgtPre($post['custAccCode'],$post['planCode'],$post['unitType'],$post['typeValue'],$post['amount'],$post['unitPercent'],$post['unit'],$post['navDate'],$c);
+        if($response['data'] !== false)
+        {
+            $response['code'] = "200";
+        }
         $this->setResponse($response);
     }
 
@@ -115,12 +120,8 @@ class UserController extends AuthController
             exit;
         }
 
-        /*$post['amount'] = (isset($post['amount']) ? $post['amount'] : 0);
-        $post['unitPercent'] = (isset($post['unitPercent']) ? $post['unitPercent'] : 0);
-        $post['unit'] = (isset($post['unit']) ? $post['unit'] : 0);*/
-
         $model = new User();
-        $c= $this->ociConnect();
+        $c = $this->ociConnect();
 
         $response['data'] = $model->getCgtPost($post['custAccCode'],$post['transactionSno'],$post['transactionType'],$c);
         $this->setResponse($response);
@@ -170,6 +171,130 @@ class UserController extends AuthController
 
     public function actionTest()
     {
+
+        $post['accessKey'] = "p0n-k@";
+        $post['accountNo'] = "00008903-1";
+        $post['customerId'] = "00008903";
+        $post['channel'] = "web";
+        $post['type1'] = "";
+        $post['availableHolding'] = "";
+        $post['transactionType'] = "";
+
+        $url = "http://124.29.246.107:1530/Service.asmx/GetBalanceDetail?accessKey=".$post['accessKey']."&accountNo=".$post['accountNo']."&customerId=".$post['customerId']."&Channel=".$post['channel']."&type1=".$post['type1']."&availableHolding=".$post['availableHolding']."&transactionType=".$post['transactionType'];
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $simple = curl_exec($ch);
+        curl_close($ch);
+        //echo $simple;exit;
+
+        //$simple = "<para><note>simple note</note></para>";
+        $p = xml_parser_create();
+        xml_parse_into_struct($p, $simple, $vals, $index);
+        xml_parser_free($p);
+        echo "Index array\n";
+        print_r($index['FUNDCODE']);
+        echo "\nVals array\n";
+        //print_r($vals);
+        exit;
+
+        $xml = simplexml_load_string($fileUrl);
+        if ($xml === false) {
+            echo "Failed loading XML: ";
+            foreach(libxml_get_errors() as $error) {
+                echo "<br>", $error->message;
+            }
+        } else {
+            print_r($xml);
+        }
+        exit;
+
+        $url = "http://124.29.246.107:1530/Service.asmx?op=GetBalanceDetail?accessKey=p0n-k@&accountNo=00008903-1&customerId=00008903&Channel=web&type1=''&availableHolding=''&transactionType=''";
+
+        $client = new \mongosoft\soapclient\Client([
+            'url' => $url,//'http://www.webservicex.com/globalweather.asmx?wsdl',
+            //'url' => "http://124.29.246.107:1530/Service.asmx?wsdl",
+        ]);
+        //$client = Yii::$app->siteApi;
+        //var_dump($client);exit;
+        $res = $client->GetBalanceDetail('accessKey=p0n-k@','accountNo=00008903-1','customerId=00008903','Channel=web','type1=""','availableHolding=""','transactionType=""');
+        print_r($res);
+        exit;
+
+
+
+        libxml_use_internal_errors(true);
+        $myXMLData = '<?xml version="1.0" encoding="UTF-8"?>
+                    <note>
+                      <to>Tove</to>
+                      <from>Jani</from>
+                      <heading>Reminder</heading>
+                      <body>Dont forget me this weekend!</body>
+                    </note>';
+
+        $url = "http://124.29.246.107:1530/Service.asmx?op=GetBalanceDetail?accessKey=p0n-k@&accountNo=00008903-1&customerId=00008903&Channel=web&type1=''&availableHolding=''&transactionType=''";
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $fileUrl = curl_exec($ch);
+        curl_close($ch);
+        echo $fileUrl;exit;
+       // $file = file_get_contents($fileUrl);
+        $fileName = "abc2.xml";
+
+        if(file_put_contents($fileName, $fileUrl))
+        {
+            if (file_exists("http://localhost/ublfm/api/web/".$fileName)) {
+                $xml = simplexml_load_file("http://localhost/ublfm/api/web/".$fileName);
+
+                print_r($xml);
+            } else {
+                exit('Failed to open test.xml.');
+            }
+            $xml=simplexml_load_file("http://localhost/ublfm/api/web/".$fileName) or die("Error: Cannot create object");
+            print_r($xml);
+            echo "yes";
+        }
+
+
+
+
+        $post['accessKey'] = "AM";
+        $post['fromDate'] = "2-jun-2015";
+        $post['toDate'] = "20-jun-2015";
+        $post['RegNo'] = "00024554-1";
+        $post['fromPlanCode'] = "000";
+        $post['toPlanCode'] = "999";
+        $post['fromFundCode'] = "000";
+        $post['toFundCode'] = "999";
+        $post['fromUnitType'] = "000";
+        $post['toUnitType'] = "999";
+        $post['isProvision'] = "Y";
+        $post['reportType'] = "7";
+        $this->debug($post);exit;
+
+        //$url = 'http://www.webservicex.com/globalweather.asmx?wsdl';
+        $url = "http://124.29.246.107:1530/Service.asmx/?wsdl";//GetAccountStatement?AccessKey=AM&fromDate=2-jun-2015&toDate=20-jun-2015&RegNo=00024554-1&fromPlanCode=000&toPlanCode=999&fromFundCode=000&toFundCode=999&fromUnitType=000&toUnitType=999&isProvision=Y&reportType=7";
+        /*$ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $data = curl_exec($ch);
+        curl_close($ch);
+        echo $data;
+        exit;*/
+
+        $client = new \mongosoft\soapclient\Client([
+            'url' => $url,//'http://www.webservicex.com/globalweather.asmx?wsdl',
+            //'url' => "http://124.29.246.107:1530/Service.asmx?wsdl",
+        ]);
+        //$client = Yii::$app->siteApi;
+        //var_dump($client);exit;
+        $res = $client->GetAccountStatement($post['accessKey'],$post['fromDate'],$post['toDate'],$post['RegNo'],$post['fromPlanCode'],$post['toPlanCode'],$post['fromFundCode'],$post['toFundCode'],$post['fromUnitType'],$post['toUnitType'],$post['isProvision'],$post['reportType']);
+        print_r($res);
+        exit;
         //Yii::$app->db->createCommand("SET time_zone = '+5:00'")->execute();exit;
         $fileUrl = Yii::$app->params['PDF_REPORT_PATH'];
         //"http://www.urartuuniversity.com/content_images/pdf-sample.pdf";
@@ -177,12 +302,12 @@ class UserController extends AuthController
 
         $file = file_get_contents($fileUrl);
         $fileName = basename($fileUrl);
-        $file = file_get_contents($fileUrl);
 
-        if(file_put_contents("../../".Yii::$app->params['PDF_REPORT_DOWNLOAD_PATH']."/".$fileName, $file))
+
+        if(file_put_contents("../../".Yii::$app->params['REPORTS']['PDF_REPORT_DOWNLOAD_PATH']."/".$fileName, $file))
         {
             echo "yes";
-            return Setting::getFileDownloadPath() .$fileName;
+            //return Setting::getFileDownloadPath() .$fileName;
         }
         else
         {
@@ -201,6 +326,50 @@ class UserController extends AuthController
             ->setSubject('UBL FM - Forgot password' )
             ->setTextBody("Hi Mohsin")
             ->send();*/
+    }
+
+    public function actionCustomerreport()
+    {
+        $post = Yii::$app->request->post();
+        if(isset($post['accessKey']) && isset($post['fromDate']) && isset($post['toDate']) && isset($post['RegNo']) && isset($post['fromPlanCode']) && isset($post['toPlanCode']) && isset($post['fromFundCode']) && isset($post['toFundCode']) && isset($post['fromUnitType']) && isset($post['toUnitType']) && isset($post['isProvision']) && isset($post['reportType']) )
+        {
+            $url = Yii::$app->params['REPORTS']['SOAP_SERVICE_URL']."?AccessKey=".$post['accessKey']."&fromDate=".$post['fromDate']."&toDate=".$post['toDate']."&RegNo=".$post['RegNo']."&fromPlanCode=".$post['toPlanCode']."&toPlanCode=".$post['toPlanCode']."&fromFundCode=".$post['fromFundCode']."&toFundCode=".$post['toFundCode']."&fromUnitType=".$post['fromUnitType']."&toUnitType=".$post['toUnitType']."&isProvision=".$post['isProvision']."&reportType=".$post['reportType'];
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $fileUrl = curl_exec($ch);
+            curl_close($ch);
+
+            //$fileUrl = "http://www.urartuuniversity.com/content_images/pdf-sample.pdf";
+            if (substr($fileUrl, -3) == 'pdf')
+            {
+                $file = file_get_contents($fileUrl);
+                $fileName = basename($fileUrl);
+
+                $date = date("Ymdhis");
+                if(file_put_contents("../../".Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName, $file))
+                {
+                    $response['code'] = '200';
+                    $response['url'] =  Yii::$app->params['REPORTS']['REPORT_PATH'].Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName;
+                    $this->setResponse($response);
+                }
+                else
+                {
+                    $response['code'] = '000';
+                    $this->setResponse($response);
+                }
+            }
+            else
+            {
+                $response['code'] = '-1';
+                $this->setResponse($response);
+            }
+        }
+        else{
+            $response['code'] = '-2';
+            $this->setResponse($response);
+        }
     }
 
     public function actionForgotpass()
@@ -338,6 +507,22 @@ class UserController extends AuthController
 //                $response['message'] = "LOCK";
             }
         }
+        $this->setResponse($response);
+    }
+
+    public function changeDistributor()
+    {
+        $post = Yii::$app->request->post();
+        $model = new User();
+        $response = $model->changeDistributor($post['email'],$post['dp_code']);
+        if($response)
+        {
+            $response['code'] = "200";
+        }
+        else {
+            $response['code'] = "403";
+        }
+
         $this->setResponse($response);
     }
 

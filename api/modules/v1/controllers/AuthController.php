@@ -11,11 +11,11 @@ class AuthController extends ActiveController
 {
     public function init() {
         parent::init();
-
     }
 
     public $authToken;
     public $modelClass = 'api\modules\v1\models\AuthUser';
+
     public function beforeAction($action){
         $post = Yii::$app->request->post();
         $posForgot = strpos($_SERVER["REQUEST_URI"],"forgotpass");
@@ -25,14 +25,7 @@ class AuthController extends ActiveController
             return true;
         }
 
-        $headArray = getallheaders();
-        foreach ($headArray as $name => $value)
-        {
-            if($name == 'authToken')
-            {
-                $this->authToken = $value;
-            }
-        }
+        $this->authToken = $this->fetchAccessToken();
 
         if(!isset($this->authToken) || empty($this->authToken))
         {
@@ -43,10 +36,9 @@ class AuthController extends ActiveController
                 exit;
                 //goto login screen
             }
-            else{
+            else
+            {
                 $model = new User();
-
-
                 $result = $model->login($post['userEmail'],$post['userPass']);
                 foreach($result[0] as $res)
                 {
@@ -55,15 +47,7 @@ class AuthController extends ActiveController
                         $rows = $model->getUserCdGroupCode($post['userEmail']);
                         $userCd = $rows[0]['USER_CD'];
                         $groupCode = $rows[0]['GROUP_CODE'];
-                        $key = $model->getDecryptKey();
-                        $data = $userCd."|".date("Ymd")." ".time();
-                        $tokenCode =  $this->simple_encrypt($data,$key);
-                        //$tokenCode = stripcslashes($tokenCode);
-                        $tokenCode = str_replace("\/","/",$tokenCode);
-                        /*if(strcasecmp( $tokenCode , $tokenCode2 ) != 0)
-                        {
-                            $tokenCode =  $this->simple_encrypt($data,$key);
-                        }*/
+                        $tokenCode = $this->createAccessToken($userCd);
                         if($model->saveAccessToken($tokenCode,$userCd))
                         {
                             $model->addLog("login",$post['userEmail']." logged in");
@@ -74,35 +58,16 @@ class AuthController extends ActiveController
                             $response['userPrivs'] = $userPrivs;
                         }
                         // $response['message'] = "Login successfully";
+                        $this->setResponse($response);
+                        exit;
                     }
-                    if($res == "FALSE")
-                    {
-                        $response['code'] = "401";
-                        //$response['message'] = "Can not login, Try again";
-                    }
-                    if($res == "INACTIVE")
-                    {
-                        $response['code'] = "405";
-                        //$response['message'] = "INACTIVE";
-                    }
-                    if($res == "LOCK")
-                    {
-                        $response['code'] = "405";
-                        // $response['message'] = "LOCK";
-                    }
-                    $this->setResponse($response);
-                    exit;
                 }
             }
         }
         else
         {
+            $userCd = $this->fetchUserCd();
             $model =new User();
-            $key = $model->getDecryptKey();
-            $decode = $this->simple_decrypt($this->authToken,$key);
-            $tokenPieces = explode("|",$decode);
-            $userCd = $tokenPieces[0];
-
             if($model->checkAccessToken($userCd,$this->authToken))
             {
                 $model->refreshToken($userCd,$this->authToken);
@@ -114,6 +79,38 @@ class AuthController extends ActiveController
                 $this->setResponse($response);
                 exit;
                 //goto login screen
+            }
+        }
+    }
+
+    private function fetchUserCd()
+    {
+        $model =new User();
+        $key = $model->getDecryptKey();
+        $decode = $this->simple_decrypt($this->authToken,$key);
+        $tokenPieces = explode("|",$decode);
+        return $tokenPieces[0];
+
+    }
+    private function createAccessToken($userCd)
+    {
+        $model = new User();
+        $key = $model->getDecryptKey();
+        $data = $userCd."|".date("Ymd")." ".time();
+        $tokenCode =  $this->simple_encrypt($data,$key);
+        $tokenCode = str_replace("\/","/",$tokenCode);
+        return $tokenCode;
+    }
+
+    private function fetchAccessToken()
+    {
+        $headArray = getallheaders();
+        foreach ($headArray as $name => $value)
+        {
+            if($name == 'authToken')
+            {
+                return $value;
+                break;
             }
         }
     }
@@ -149,5 +146,6 @@ class AuthController extends ActiveController
 
         $jsonResponse  = json_encode($response);
         echo $jsonResponse;
+        exit;
     }
 }

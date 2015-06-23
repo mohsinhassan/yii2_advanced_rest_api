@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "95f8747434b88056d7102a8a2dd669ed",
+    "hash": "6ff881bed22e7454e0539937f2532225",
     "packages": [
         {
             "name": "bower-asset/bootstrap",
@@ -323,6 +323,51 @@
             "time": "2013-11-30 08:25:19"
         },
         {
+            "name": "mongosoft/yii2-soap-client",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mongosoft/yii2-soap-client.git",
+                "reference": "1cca12c4cadb505a98f958076c5c8cfe2109563a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mongosoft/yii2-soap-client/zipball/1cca12c4cadb505a98f958076c5c8cfe2109563a",
+                "reference": "1cca12c4cadb505a98f958076c5c8cfe2109563a",
+                "shasum": ""
+            },
+            "require": {
+                "ext-soap": "*",
+                "php": ">=5.4.0",
+                "yiisoft/yii2": "*"
+            },
+            "type": "yii2-extension",
+            "autoload": {
+                "psr-4": {
+                    "mongosoft\\soapclient\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "Alexander Mohorev",
+                    "email": "dev.mohorev@gmail.com"
+                }
+            ],
+            "description": "SOAP Client Extension for Yii 2",
+            "homepage": "https://github.com/mongosoft/yii2-soap-client",
+            "keywords": [
+                "consumer",
+                "extension",
+                "soap",
+                "yii2"
+            ],
+            "time": "2015-04-23 06:40:57"
+        },
+        {
             "name": "swiftmailer/swiftmailer",
             "version": "5.x-dev",
             "source": {
@@ -332,7 +377,7 @@
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/swiftmailer/swiftmailer/zipball/ac8b475454c120bfb31f5bef475233dd4fb6b626",
+                "url": "https://api.github.com/repos/swiftmailer/swiftmailer/zipball/21b7eb31c51d98e9da0543527a0242875f3d92b9",
                 "reference": "ac8b475454c120bfb31f5bef475233dd4fb6b626",
                 "shasum": ""
             },
@@ -384,7 +429,7 @@
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/yiisoft/yii2-framework/zipball/09d072c7632efd05eaafe2321b5b7162459e05e6",
+                "url": "https://api.github.com/repos/yiisoft/yii2-framework/zipball/ea11432729fb9e21ee616f8ffaf510a29bd635b6",
                 "reference": "09d072c7632efd05eaafe2321b5b7162459e05e6",
                 "shasum": ""
             },
@@ -472,7 +517,7 @@
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/yiisoft/yii2-bootstrap/zipball/05253b8fd6d36ba23292eac65e573d1b1f54b0ec",
+                "url": "https://api.github.com/repos/yiisoft/yii2-bootstrap/zipball/0396fafd62d30dbf83e5f56cc72536ed5ce1d63e",
                 "reference": "05253b8fd6d36ba23292eac65e573d1b1f54b0ec",
                 "shasum": ""
             },
@@ -522,7 +567,7 @@
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/yiisoft/yii2-composer/zipball/c7f59a6db76ae12aef4ddd244b0d02ab76b8a0b8",
+                "url": "https://api.github.com/repos/yiisoft/yii2-composer/zipball/6b2a2b3bb83d4b3dd791f76e64c48973ce01bac6",
                 "reference": "c7f59a6db76ae12aef4ddd244b0d02ab76b8a0b8",
                 "shasum": ""
             },
@@ -569,7 +614,7 @@
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/yiisoft/yii2-swiftmailer/zipball/a6bef7f792543832701e73889b4b7b7704302967",
+                "url": "https://api.github.com/repos/yiisoft/yii2-swiftmailer/zipball/fffcd50b35c53888b40bb7cf9d52f25e1a4e2f43",
                 "reference": "a6bef7f792543832701e73889b4b7b7704302967",
                 "shasum": ""
             },
@@ -648,7 +693,7 @@
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/fzaninotto/Faker/zipball/bcc07d0cb56cf5ec4fb6e66dda5f5fb9e39e5c27",
+                "url": "https://api.github.com/repos/fzaninotto/Faker/zipball/9eed6c2a6fc9944903df92f9850b9dcc5a373410",
                 "reference": "bcc07d0cb56cf5ec4fb6e66dda5f5fb9e39e5c27",
                 "shasum": ""
             },
@@ -779,7 +824,7 @@
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/yiisoft/yii2-debug/zipball/a9efc6b8e4439731b9c26ef74e429f9c2da7b24b",
+                "url": "https://api.github.com/repos/yiisoft/yii2-debug/zipball/b9bbead8f827a0eae1dad69e52ad322450a9381b",
                 "reference": "a9efc6b8e4439731b9c26ef74e429f9c2da7b24b",
                 "shasum": ""
             },
@@ -873,7 +918,7 @@
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/yiisoft/yii2-gii/zipball/ec0c94d5992a27f9c81558fe2b825f209c1e5f75",
+                "url": "https://api.github.com/repos/yiisoft/yii2-gii/zipball/bc7df9d8fa44b3308cc899ffc8e4204316304e41",
                 "reference": "ec0c94d5992a27f9c81558fe2b825f209c1e5f75",
                 "shasum": ""
             },

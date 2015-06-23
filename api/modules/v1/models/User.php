@@ -370,7 +370,7 @@ class User extends ActiveRecord
         }
     }
 
-    public function  getSalesEntityGroup($groupCode)
+    public function getSalesEntityGroup($groupCode)
     {
         try{
             $connection = \Yii::$app->db;
@@ -382,7 +382,8 @@ class User extends ActiveRecord
             echo 'Caught exception: ',  $e->getMessage(), "\n";
         }
     }
-    public function  getSalesEntityGroupDtl()
+
+    public function getSalesEntityGroupDtl()
     {
         try{
             $connection = \Yii::$app->db;
@@ -407,6 +408,7 @@ class User extends ActiveRecord
             echo 'Caught exception: ',  $e->getMessage(), "\n";
         }
     }
+
     public function  getCommissionStructureFL($groupCode)
     {
         try{
@@ -420,122 +422,81 @@ class User extends ActiveRecord
         }
     }
 
-    /*public function getCustomersData($accountCode,$accountName,$cnic,$email,$cgtExempted,$zakatExempted,$phone)
-    {
-        $connection = \Yii::$app->db;
-
-        $sql = "select * from vw_customers where  1 = 1 ";
-        if(!empty($accountCode))
-        {
-            $sql .= " and ACCOUNT_CODE = '".$accountCode."' ";
-        }
-        if(!empty($email))
-        {
-            $sql .= " and EMAIL = '".$email."'";
-        }
-        if(!empty($accountName))
-        {
-            $sql .= " and ACCOUNT_NAME like '%".$accountName."%'";
-        }
-        if(!empty($cnic))
-        {
-            $sql .= "and (CNIC = '".$cnic."' OR NTN = '".$cnic."')";
-        }
-        if(!empty($cgtExempted))
-        {
-            $sql .= " and CGT_EXEMPTED = '".$cgtExempted."'";
-        }
-        if(!empty($zakatExempted))
-        {
-            $sql .= " and ZAKAT_EXEMPTED = '".$zakatExempted."'";
-        }
-        if(!empty($phone))
-        {
-            $sql .= " and (RES_PHONE_NO = '".$phone."' OR OFF_PHONE_NO ='".$phone."' OR MOBILE_NO='".$phone."') ";
-        }
-
-        //echo $sql;
-        $command = $connection->createCommand($sql);
-        $data = $command->queryAll();
-        return $data;
-    }*/
-
     public function getCustomersList($userCd,$accountCode,$accountName,$cnic,$email,$cgtExempted,$zakatExempted,$phone)
     {
         try{
-        $connection = \Yii::$app->db;
-        $sql = "select ACCOUNT_CODE from vw_user_group_customer where user_cd = '".$userCd."'";
-        $command = $connection->createCommand($sql);
-        $rows = $command->queryAll();
+            $connection = \Yii::$app->db;
+            $sql = "select ACCOUNT_CODE from vw_user_group_customer where user_cd = '".$userCd."'";
+            $command = $connection->createCommand($sql);
+            $rows = $command->queryAll();
 
-        $acSeries = "";
-        $custGroupSnoArray = array();
+            $acSeries = "";
+            $custGroupSnoArray = array();
 
-        foreach($rows as $row)
-        {
-            $custGroupSnoArray[] = $row['ACCOUNT_CODE'];
-        }
-        $custGroupSnoArray = array_unique($custGroupSnoArray);
+            foreach($rows as $row)
+            {
+                $custGroupSnoArray[] = $row['ACCOUNT_CODE'];
+            }
+            $custGroupSnoArray = array_unique($custGroupSnoArray);
 
-        foreach($custGroupSnoArray as $row)
-        {
-            $acSeries .= "'".$row."',";
-        }
-        $acSeries = substr($acSeries,0,(strlen($acSeries) - 1));
+            foreach($custGroupSnoArray as $row)
+            {
+                $acSeries .= "'".$row."',";
+            }
+            $acSeries = substr($acSeries,0,(strlen($acSeries) - 1));
 
-        $searchByAccountCode = 0;
-        if(!empty($accountCode))
-        {
-            if (in_array($accountCode, $custGroupSnoArray)) {
-                $searchByAccountCode = 1;
+            $searchByAccountCode = 0;
+            if(!empty($accountCode))
+            {
+                if (in_array($accountCode, $custGroupSnoArray))
+                {
+                    $searchByAccountCode = 1;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            $sqlCust= "select * from vw_customers where 1 = 1 ";
+            if($searchByAccountCode)
+            {
+                $sqlCust .= " and ACCOUNT_CODE = '".$accountCode."' ";
             }
             else
             {
-                return false;
-                exit;
+                $sqlCust .= " and ACCOUNT_CODE in(".$acSeries.")";
             }
-        }
-
-        $sqlCust= "select * from vw_customers where 1 = 1 ";
-        if($searchByAccountCode)
-        {
-            $sqlCust .= " and ACCOUNT_CODE = '".$accountCode."' ";
-        }
-        else
-        {
-            $sqlCust .= " and ACCOUNT_CODE in(".$acSeries.")";
-        }
-        if(!empty($email))
-        {
-            $sqlCust .= " and EMAIL = '".$email."'";
-        }
-        if(!empty($accountName))
-        {
-            $sqlCust .= " and ACCOUNT_NAME like '%".$accountName."%'";
-        }
-        if(!empty($cnic))
-        {
-            $sqlCust .= "and (CNIC = '".$cnic."' OR NTN = '".$cnic."')";
-        }
-        if(!empty($cgtExempted))
-        {
-            $sqlCust .= " and CGT_EXEMPTED = '".$cgtExempted."'";
-        }
-        if(!empty($zakatExempted))
-        {
-            $sqlCust .= " and ZAKAT_EXEMPTED = '".$zakatExempted."'";
-        }
-        if(!empty($phone))
-        {
-            $sqlCust .= " and (RES_PHONE_NO = '".$phone."' OR OFF_PHONE_NO ='".$phone."' OR MOBILE_NO='".$phone."') ";
-        }
-        $commandCust = $connection->createCommand($sqlCust);
-        $data = $commandCust->queryAll();
-        return $data;
+            if(!empty($email))
+            {
+                $sqlCust .= " and EMAIL = '".$email."'";
+            }
+            if(!empty($accountName))
+            {
+                $sqlCust .= " and ACCOUNT_NAME like '%".$accountName."%'";
+            }
+            if(!empty($cnic))
+            {
+                $sqlCust .= "and (CNIC = '".$cnic."' OR NTN = '".$cnic."')";
+            }
+            if(!empty($cgtExempted))
+            {
+                $sqlCust .= " and CGT_EXEMPTED = '".$cgtExempted."'";
+            }
+            if(!empty($zakatExempted))
+            {
+                $sqlCust .= " and ZAKAT_EXEMPTED = '".$zakatExempted."'";
+            }
+            if(!empty($phone))
+            {
+                $sqlCust .= " and (RES_PHONE_NO = '".$phone."' OR OFF_PHONE_NO ='".$phone."' OR MOBILE_NO='".$phone."') ";
+            }
+            $commandCust = $connection->createCommand($sqlCust);
+            $data = $commandCust->queryAll();
+            return $data;
         } catch (Exception $e) {
             echo 'Caught exception: ',  $e->getMessage(), "\n";
         }
-
     }
 
     public function getUserGroups($userCd)
@@ -551,7 +512,7 @@ class User extends ActiveRecord
         }
     }
 
-    public function getUserGroupCustomers($userCd,$groupSno)
+    /*public function getUserGroupCustomers($userCd,$groupSno)
     {
         try{
         $connection = \Yii::$app->db;
@@ -562,7 +523,7 @@ class User extends ActiveRecord
         } catch (Exception $e) {
             echo 'Caught exception: ',  $e->getMessage(), "\n";
         }
-    }
+    }*/
     private function debug($res)
     {
         echo "<pre>";
@@ -617,7 +578,7 @@ class User extends ActiveRecord
     {
         try{
             $connection = \Yii::$app->db;
-            $selSql = "select token_code from pa_dp_session_history where token_code = '".$authToken."' and user_cd='".$userCd."' and ip_address = '".$_SERVER['REMOTE_ADDR']."' and status='active'  and session_end > to_date('".date('m/d/y H:i:s')."','mm/dd/yyyy HH24:MI:SS')"; //6/17/2015 12:29:08 AM
+            $selSql = "select token_code from pa_dp_session_history where token_code = '".$authToken."' and user_cd='".$userCd."' and ip_address = '".$_SERVER['REMOTE_ADDR']."' and status='active'  and session_end > to_date('".date('m/d/Y H:i:s')."','mm/dd/yyyy HH24:MI:SS')"; //6/17/2015 12:29:08 AM
             $selCommand = $connection->createCommand($selSql);
             $postCount = $selCommand->queryScalar();
             return $postCount;
@@ -715,7 +676,8 @@ class User extends ActiveRecord
 
     public function getEarnedValue($groupSno)
     {
-        try{
+        try
+        {
             $connection = \Yii::$app->db;
             $loadComm = "";
             $mfComm = "";
@@ -742,44 +704,22 @@ class User extends ActiveRecord
         }
     }
 
-    public function getEarnedValue2($userCd)
+    public function changeDistributor($email,$dp_code)
     {
-        try{
+        try
+        {
             $connection = \Yii::$app->db;
-            $gsnoSql = "select GROUP_SNO from vw_user_group where user_cd = '$userCd'";
-            $command = $connection->createCommand($gsnoSql);
-            $res = $command->queryAll();
-            $response = array();
-
-            $loadComm = "";
-            $mfComm = "";
-            $ytdComm = "";
-            $fromDate= date("1-M-y");
-            $toDate = date("t-M-y");
-
-
-            foreach($res as $groupSno)
+            $command = $connection->createCommand("call PROC_DP_UPDATE_GP_CODE ('".$email."' ,'".$dp_code."')");
+            if($command->execute())
             {
-                $groupSno = $groupSno['GROUP_SNO'];
-
-                $command = $connection->createCommand("CALL PROC_DP_EARNED_VALUE (:P_GROUP_SNO, :P_FROM_DATE, :P_TO_DATE, :P_O_LOAD_COMM,:P_O_MF_COMM,:P_O_YTD_COMM)");
-                $command->bindParam(':P_GROUP_SNO', $groupSno, PDO::PARAM_STR);
-                $command->bindParam(':P_FROM_DATE', $fromDate, PDO::PARAM_STR);
-                $command->bindParam(':P_TO_DATE', $toDate, PDO::PARAM_STR);
-                $command->bindParam(':P_O_LOAD_COMM', $loadComm, PDO::PARAM_INT, 20);
-                $command->bindParam(':P_O_MF_COMM', $mfComm, PDO::PARAM_INT, 20);
-                $command->bindParam(':P_O_YTD_COMM', $ytdComm, PDO::PARAM_INT, 20);
-                $command->execute();
-
-                $response[]['loadComm'] = $loadComm;
-                $response[]['mfComm'] = $mfComm;
-                $response[]['ytdComm'] = $ytdComm;
-                $response[]['fromDate'] = $fromDate;
-                //
+                return 1;
             }
-            $this->debug($response);exit;
-            return $response;
-        } catch (Exception $e) {
+            else
+            {
+                return 0;
+            }
+        } catch (Exception $e)
+        {
             echo 'Caught exception: ',  $e->getMessage(), "\n";
         }
     }
