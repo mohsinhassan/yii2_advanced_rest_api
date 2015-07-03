@@ -6,6 +6,11 @@ use \yii\db\mssql\PDO;
 
 class User extends ActiveRecord
 {
+    public $connection;
+
+    public function init() {
+        $this->connection = \Yii::$app->db;
+    }
     /**
      * @inheritdoc
      */
@@ -14,22 +19,25 @@ class User extends ActiveRecord
     public function login($email,$password)
     {
         try {
-            $connection = \Yii::$app->db;
+            //$connection = \Yii::$app->db;
+
             $sql = "select FUNC_DP_GET_LOGIN_STATUS('$email','$password') from dual";
-            $command = $connection->createCommand($sql);
+            $command = $this->connection->createCommand($sql);
             $rows = $command->queryAll();
             return $rows;
         } catch (Exception $e) {
             echo 'Caught exception: ',  $e->getMessage(), "\n";
         }
     }
+    public function test()
+    {echo "here";}
 
     public function changePassword($email,$oldPassword,$newPassword)
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $status = '';
-            $command = $connection->createCommand("CALL PROC_DP_PASSWORD_STATUS(:P_EMAIL, :P_OLD_PASSWORD, :P_NEW_PASSWORD, :P_STATUS)");
+            $command = $this->connection->createCommand("CALL PROC_DP_PASSWORD_STATUS(:P_EMAIL, :P_OLD_PASSWORD, :P_NEW_PASSWORD, :P_STATUS)");
             $command->bindParam(':P_EMAIL', $email, PDO::PARAM_STR);
             $command->bindParam(':P_OLD_PASSWORD', $oldPassword, PDO::PARAM_STR);
             $command->bindParam(':P_NEW_PASSWORD', $newPassword, PDO::PARAM_STR);
@@ -85,12 +93,12 @@ class User extends ActiveRecord
     {
         try
         {
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $res = $this->validateEmail($email);
             if($res)
             {
                 $sql = "select USER_CD from vw_user_profile where email_address = '".$email."'";
-                $command = $connection->createCommand($sql);
+                $command = $this->connection->createCommand($sql);
                 $rows = $command->queryAll();
                 return $rows[0]['USER_CD'];
             }
@@ -106,9 +114,9 @@ class User extends ActiveRecord
     {
         try
         {
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $sql = "select USER_CD from pa_dp_session_history where token_code = '".$authToken."'";
-            $command = $connection->createCommand($sql);
+            $command = $this->connection->createCommand($sql);
             $rows = $command->queryAll();
             return $rows[0]['USER_CD'];
         } catch (Exception $e) {
@@ -120,18 +128,32 @@ class User extends ActiveRecord
     {
         try
         {
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $res = $this->validateEmail($email);
             if($res)
             {
                 $sql = "select USER_CD,GROUP_CODE from vw_user_profile where email_address = '".$email."'";
-                $command = $connection->createCommand($sql);
+                $command = $this->connection->createCommand($sql);
                 $rows = $command->queryAll();
                 return $rows;
             }
             else{
                 return false;
             }
+        } catch (Exception $e) {
+            echo 'Caught exception: ',  $e->getMessage(), "\n";
+        }
+    }
+
+    public function getUserGroupSno($userCd)
+    {
+        try
+        {
+            // $connection = \Yii::$app->db;
+            $sql = "select group_sno from vw_user_group_customer where user_cd= '$userCd' group by group_sno";
+            $command = $this->connection->createCommand($sql);
+            $rows = $command->queryOne();
+            return $rows;
         } catch (Exception $e) {
             echo 'Caught exception: ',  $e->getMessage(), "\n";
         }
@@ -239,7 +261,7 @@ class User extends ActiveRecord
             $mdun = md5($dmtran.$un);
             $sort=substr($mdun, 16); // if you want sort length code.
 
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $userCd = $this->getUserCd($userEmail);
 
             //$selRows = $this->getVerifyCodeExpireMinutes();
@@ -249,7 +271,7 @@ class User extends ActiveRecord
             $browser =  $ua['name']. " " . $ua['version'];
             $sql = "insert into pa_dp_password_request values (".date("dis").",'".$userCd."',to_date('".date('Y-m-d H:i:s')."','yyyy-mm-dd HH24:MI:SS'),'".$_SERVER['REMOTE_ADDR']."','".$browser."','".$OS."','".substr($mdun,0,19)."',0)";
 
-            $command = $connection->createCommand($sql);
+            $command = $this->connection->createCommand($sql);
             $rows = $command->execute();
 
             /* \Yii::$app->mail->compose('your_view')
@@ -265,24 +287,25 @@ class User extends ActiveRecord
             echo 'Caught exception: ',  $e->getMessage(), "\n";
         }
     }
+
     public function codeVarify($userEmail,$codeVerify,$newPassword)
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $userCd = $this->getUserCd($userEmail);
             $selRows = $this->getVerifyCodeExpireMinutes();
             $sql = "select * from PA_DP_PASSWORD_REQUEST where user_cd = '".$userCd."' and short_code = '".$codeVerify."' and request_date > to_date('".date('Y-m-d ').date('H:i', strtotime('-'.$selRows[0]['KEY_VALUE'].' minutes')).date(':s')."','yyyy-mm-dd HH24:MI:SS') and request_expired = 0";
-            $command = $connection->createCommand($sql);
+            $command = $this->connection->createCommand($sql);
             $postCount = $command->queryScalar();
             if($postCount)
             {
                 $updSql = "update PA_DP_PASSWORD_REQUEST set request_expired =1 where  user_cd = '".$userCd."' and short_code = '".$codeVerify."'";
-                $updCommand = $connection->createCommand($updSql);
+                $updCommand = $this->connection->createCommand($updSql);
                 $updCommand->execute();
                 /////////////////////////Change password procedure code/////////////////////////
                 $status = '';
                 $oldPassword = '';
-                $command = $connection->createCommand("CALL PROC_DP_PASSWORD_STATUS(:P_EMAIL, :P_OLD_PASSWORD, :P_NEW_PASSWORD, :P_STATUS)");
+                $command = $this->connection->createCommand("CALL PROC_DP_PASSWORD_STATUS(:P_EMAIL, :P_OLD_PASSWORD, :P_NEW_PASSWORD, :P_STATUS)");
                 $command->bindParam(':P_EMAIL', $userEmail, PDO::PARAM_STR);
                 $command->bindParam(':P_OLD_PASSWORD', $oldPassword, PDO::PARAM_STR);
                 $command->bindParam(':P_NEW_PASSWORD', $newPassword, PDO::PARAM_STR);
@@ -295,7 +318,7 @@ class User extends ActiveRecord
             else
             {
                 $updSql = "update PA_DP_PASSWORD_REQUEST set request_expired =1 where  user_cd = '".$userCd."' and short_code = '".$codeVerify."'";
-                $updCommand = $connection->createCommand($updSql);
+                $updCommand = $this->connection->createCommand($updSql);
                 $updCommand->execute();
                 return 0;
             }
@@ -354,11 +377,11 @@ class User extends ActiveRecord
     {
         try
         {
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $status = '';
             $oldPassword = '';
             $newPassword = '';
-            $command = $connection->createCommand("CALL PROC_DP_PASSWORD_STATUS(:P_EMAIL, :P_OLD_PASSWORD, :P_NEW_PASSWORD, :P_STATUS)");
+            $command = $this->connection->createCommand("CALL PROC_DP_PASSWORD_STATUS(:P_EMAIL, :P_OLD_PASSWORD, :P_NEW_PASSWORD, :P_STATUS)");
             $command->bindParam(':P_EMAIL', $userEmail, PDO::PARAM_STR);
             $command->bindParam(':P_OLD_PASSWORD', $oldPassword, PDO::PARAM_STR);
             $command->bindParam(':P_NEW_PASSWORD', $newPassword, PDO::PARAM_STR);
@@ -373,9 +396,9 @@ class User extends ActiveRecord
     public function getSalesEntityGroup($groupCode)
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $sql = "select * from pa_sale_entity_group  where group_code = '".$groupCode."'";
-            $command = $connection->createCommand($sql);
+            $command = $this->connection->createCommand($sql);
             $data = $command->queryAll();
             return $data;
         } catch (Exception $e) {
@@ -386,9 +409,9 @@ class User extends ActiveRecord
     public function getSalesEntityGroupDtl()
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $sql = "select * from pa_sale_entity_group_dtl";
-            $command = $connection->createCommand($sql);
+            $command = $this->connection->createCommand($sql);
             $data = $command->queryAll();
             return $data;
         } catch (Exception $e) {
@@ -399,9 +422,9 @@ class User extends ActiveRecord
     public function  getCommissionStructureMF($groupCode)
     {
         try{
-        $connection = \Yii::$app->db;
-        $sql = "select * from vw_dp_commission where DISTRIBUTOR_CODE= '".$groupCode."' and DISTRIBUTOR_TYPE = 'D' and COMM_TYPE='S'";
-        $command = $connection->createCommand($sql);
+        // $connection = \Yii::$app->db;
+        $sql = "select * from vw_dp_commission where DISTRIBUTOR_CODE= '".$groupCode."' and DISTRIBUTOR_TYPE = 'D' and COMM_TYPE='F'";
+        $command = $this->connection->createCommand($sql);
         $data = $command->queryAll();
         return $data;
         } catch (Exception $e) {
@@ -412,11 +435,11 @@ class User extends ActiveRecord
     public function  getCommissionStructureFL($groupCode)
     {
         try{
-        $connection = \Yii::$app->db;
-        $sql = "select * from vw_dp_commission where DISTRIBUTOR_CODE= '".$groupCode."' and DISTRIBUTOR_TYPE = 'I' and COMM_TYPE='F'";
-        $command = $connection->createCommand($sql);
-        $data = $command->queryAll();
-        return $data;
+            // $connection = \Yii::$app->db;
+            $sql = "select * from vw_dp_commission where DISTRIBUTOR_CODE= '".$groupCode."' and DISTRIBUTOR_TYPE = 'I' and COMM_TYPE='S'";
+            $command = $this->connection->createCommand($sql);
+            $data = $command->queryAll();
+            return $data;
         } catch (Exception $e) {
             echo 'Caught exception: ',  $e->getMessage(), "\n";
         }
@@ -425,9 +448,9 @@ class User extends ActiveRecord
     public function getCustomersList($userCd,$accountCode,$accountName,$cnic,$email,$cgtExempted,$zakatExempted,$phone)
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $sql = "select ACCOUNT_CODE from vw_user_group_customer where user_cd = '".$userCd."'";
-            $command = $connection->createCommand($sql);
+            $command = $this->connection->createCommand($sql);
             $rows = $command->queryAll();
 
             $acSeries = "";
@@ -491,7 +514,7 @@ class User extends ActiveRecord
             {
                 $sqlCust .= " and (RES_PHONE_NO = '".$phone."' OR OFF_PHONE_NO ='".$phone."' OR MOBILE_NO='".$phone."') ";
             }
-            $commandCust = $connection->createCommand($sqlCust);
+            $commandCust = $this->connection->createCommand($sqlCust);
             $data = $commandCust->queryAll();
             return $data;
         } catch (Exception $e) {
@@ -502,9 +525,9 @@ class User extends ActiveRecord
     public function getUserGroups($userCd)
     {
         try{
-        $connection = \Yii::$app->db;
+        // $connection = \Yii::$app->db;
         $sql = "select * from vw_user_group where user_cd = '".$userCd."'";
-        $command = $connection->createCommand($sql);
+        $command = $this->connection->createCommand($sql);
         $rows = $command->queryAll();
         return $rows;
         } catch (Exception $e) {
@@ -534,9 +557,9 @@ class User extends ActiveRecord
     public function getVerifyCodeExpireMinutes()
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $selSql = "select KEY_VALUE from dp_setup where key_desc= 'verify_code_expire_minutes'";
-            $selCommand = $connection->createCommand($selSql);
+            $selCommand = $this->connection->createCommand($selSql);
             $selRows = $selCommand->queryAll();
             return $selRows;
         } catch (Exception $e) {
@@ -547,14 +570,14 @@ class User extends ActiveRecord
     public function saveAccessToken($authToken,$userCd)
     {
         try{
-        $connection = \Yii::$app->db;
+        // $connection = \Yii::$app->db;
         $selRows = $this->getTokenExpireMinutes();
         $this->logout($userCd);
 
         $sql = "insert into pa_dp_session_history values (".date('dhis').",'".$userCd."',to_date('".date('Y-m-d H:i:s')."','yyyy-mm-dd HH24:MI:SS'),";
         $sql .= "to_date('".date('Y-m-d ').date('H:i', strtotime('+'.$selRows[0]['KEY_VALUE'].' minutes')).date(':s')."','yyyy-mm-dd HH24:MI:SS'),'active','description','".$_SERVER['REMOTE_ADDR']."','".$authToken."',";
         $sql .= "to_date('".date('Y-m-d H:i:s')."','yyyy-mm-dd HH24:MI:SS'))";
-        $command = $connection->createCommand($sql);
+        $command = $this->connection->createCommand($sql);
         $res = $command->execute();
         return $res;
         } catch (Exception $e) {
@@ -565,9 +588,9 @@ class User extends ActiveRecord
     public function logout($tokenCode)
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $delSql = "delete from pa_dp_session_history where token_code = '".$tokenCode."' ";
-            $delCommand = $connection->createCommand($delSql);
+            $delCommand = $this->connection->createCommand($delSql);
             $delCommand->execute();
         } catch (Exception $e) {
             echo 'Caught exception: ',  $e->getMessage(), "\n";
@@ -577,9 +600,9 @@ class User extends ActiveRecord
     public function checkAccessToken($userCd,$authToken)
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $selSql = "select token_code from pa_dp_session_history where token_code = '".$authToken."' and user_cd='".$userCd."' and ip_address = '".$_SERVER['REMOTE_ADDR']."' and status='active'  and session_end > to_date('".date('m/d/Y H:i:s')."','mm/dd/yyyy HH24:MI:SS')"; //6/17/2015 12:29:08 AM
-            $selCommand = $connection->createCommand($selSql);
+            $selCommand = $this->connection->createCommand($selSql);
             $postCount = $selCommand->queryScalar();
             return $postCount;
         } catch (Exception $e) {
@@ -590,10 +613,10 @@ class User extends ActiveRecord
     public function refreshToken($userCd,$token)
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $selRows = $this->getTokenExpireMinutes();
             $selSql = "update pa_dp_session_history set session_end = to_date('".date('Y-m-d ').date('H:i', strtotime('+'.$selRows[0]['KEY_VALUE'].' minutes')).date(':s')."','yyyy-mm-dd HH24:MI:SS') where user_cd = '".$userCd."' and token_code = '".$token."' and ip_address = '".$_SERVER['REMOTE_ADDR']."'";
-            $selCommand = $connection->createCommand($selSql);
+            $selCommand = $this->connection->createCommand($selSql);
             $selCommand->execute();
         } catch (Exception $e) {
             echo 'Caught exception: ',  $e->getMessage(), "\n";
@@ -603,9 +626,9 @@ class User extends ActiveRecord
     public function getAccessToken($userCd)
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $selSql =" select token_code from pa_dp_session_history where user_cd = '".$userCd."'";
-            $selCommand = $connection->createCommand($selSql);
+            $selCommand = $this->connection->createCommand($selSql);
             $selRows = $selCommand->queryAll();
             return $selRows;
         } catch (Exception $e) {
@@ -616,9 +639,9 @@ class User extends ActiveRecord
     public function getDecryptKey()
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $selSql = "select KEY_VALUE from dp_setup where key_desc= 'decrypt_key'";
-            $selCommand = $connection->createCommand($selSql);
+            $selCommand = $this->connection->createCommand($selSql);
             $selRows = $selCommand->queryAll();
             return $selRows[0]['KEY_VALUE'];
         } catch (Exception $e) {
@@ -629,9 +652,9 @@ class User extends ActiveRecord
     public function getTokenExpireMinutes()
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $selSql = "select KEY_VALUE from dp_setup where key_desc= 'access_token_expire_minutes'";
-            $selCommand = $connection->createCommand($selSql);
+            $selCommand = $this->connection->createCommand($selSql);
             $selRows = $selCommand->queryAll();
             return $selRows;
         } catch (Exception $e) {
@@ -642,13 +665,13 @@ class User extends ActiveRecord
     public function addLog($event,$msg)
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $evntSql = "select event_sno from Pa_Dp_Events where event_desc = '".$event."'";
-            $eventCommand = $connection->createCommand($evntSql);
+            $eventCommand = $this->connection->createCommand($evntSql);
             $eventRows = $eventCommand->queryAll();
             $eventSno = $eventRows[0]['EVENT_SNO'];
             $insSql = "insert into PA_DP_LOGS (ACTION_DATE,EVENT_SNO,LOG_DESCRIP) values (to_date('".date("y-m-d H:i:s")."','yyyy-mm-dd HH24:MI:SS'),'$eventSno','$msg')";
-            $insCommand = $connection->createCommand($insSql);
+            $insCommand = $this->connection->createCommand($insSql);
             $insCommand->execute();
 
         } catch (Exception $e) {
@@ -659,9 +682,9 @@ class User extends ActiveRecord
     public function getUserPrivs($userCd)
     {
         try{
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $sql = "Select OPT_CD from VW_USER_PRIVS where user_cd='".$userCd."'";
-            $command = $connection->createCommand($sql);
+            $command = $this->connection->createCommand($sql);
             $res = $command->queryAll();
             foreach($res as $resPriv)
             {
@@ -678,14 +701,14 @@ class User extends ActiveRecord
     {
         try
         {
-            $connection = \Yii::$app->db;
+            // $connection = \Yii::$app->db;
             $loadComm = "";
             $mfComm = "";
             $ytdComm = "";
             $fromDate= date("1-M-y");
             $toDate = date("t-M-y");
 
-            $command = $connection->createCommand("CALL PROC_DP_EARNED_VALUE (:P_GROUP_SNO, :P_FROM_DATE, :P_TO_DATE, :P_O_LOAD_COMM,:P_O_MF_COMM,:P_O_YTD_COMM)");
+            $command = $this->connection->createCommand("CALL PROC_DP_EARNED_VALUE (:P_GROUP_SNO, :P_FROM_DATE, :P_TO_DATE, :P_O_LOAD_COMM,:P_O_MF_COMM,:P_O_YTD_COMM)");
             $command->bindParam(':P_GROUP_SNO', $groupSno, PDO::PARAM_STR);
             $command->bindParam(':P_FROM_DATE', $fromDate, PDO::PARAM_STR);
             $command->bindParam(':P_TO_DATE', $toDate, PDO::PARAM_STR);
@@ -708,8 +731,8 @@ class User extends ActiveRecord
     {
         try
         {
-            $connection = \Yii::$app->db;
-            $command = $connection->createCommand("call PROC_DP_UPDATE_GP_CODE ('".$email."' ,'".$dp_code."')");
+            // $connection = \Yii::$app->db;
+            $command = $this->connection->createCommand("call PROC_DP_UPDATE_GP_CODE ('".$email."' ,'".$dp_code."')");
             if($command->execute())
             {
                 return 1;
@@ -722,5 +745,44 @@ class User extends ActiveRecord
         {
             echo 'Caught exception: ',  $e->getMessage(), "\n";
         }
+    }
+
+    public function getAumrep($fromDate)
+    {
+        $command = $this->connection->createCommand("select PKG_DP_REP.func_get_aum_rep ('$fromDate') from dual");
+        $response = $command->queryAll();
+        return $response;
+    }
+
+    public function getDalrep($fromDate,$toDate,$p_ic)
+    {
+        $command = $this->connection->createCommand("select PKG_DP_REP.FUNC_GET_DAL_REP ('$fromDate', '$toDate', '$p_ic') from dual");
+        $result = $command->queryAll();
+        $response = $result;
+        return $response;
+
+    }
+
+    public function getCprnrep($fromDate,$toDate,$customerCode,$fundCode)
+    {
+            /*$connection = \Yii::$app->db;
+            $fromDate = "01-jan-2015";
+            $toDate = "31-jan-2015";
+            $result = "";
+            $customerCode = '00025894-1';
+            $fundCode ='ASSF';*/
+
+            $command = $this->connection->createCommand("select PKG_DP_REP.FUNC_GET_CPRN_REP ('$fromDate', '$toDate', '$customerCode','$fundCode') from dual");
+            $response = $command->queryAll();
+            return $response;
+    }
+
+    public function getAllGroupMembers($userCd)
+    {
+        $sql = "select * from PA_SALE_ENTITY_GROUP where group_sno in (select group_sno from VW_USER_GROUP where user_cd = '$userCd')";
+
+        $command = $this->connection->createCommand($sql);
+        $rows = $command->queryAll();
+        return $rows;
     }
 }
