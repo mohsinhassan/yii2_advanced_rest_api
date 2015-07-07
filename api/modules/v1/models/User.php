@@ -729,21 +729,15 @@ class User extends ActiveRecord
 
     public function changeDistributor($email,$dp_code)
     {
-        try
+
+        $command = $this->connection->createCommand("call PROC_DP_UPDATE_GP_CODE ('".$email."' ,'".$dp_code."')");
+        if($command->execute())
         {
-            // $connection = \Yii::$app->db;
-            $command = $this->connection->createCommand("call PROC_DP_UPDATE_GP_CODE ('".$email."' ,'".$dp_code."')");
-            if($command->execute())
-            {
-                return 1;
-            }
-            else
-            {
-                return 0;
-            }
-        } catch (Exception $e)
+            return true;
+        }
+        else
         {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return false;
         }
     }
 
@@ -781,6 +775,48 @@ class User extends ActiveRecord
     {
         $sql = "select * from PA_SALE_ENTITY_GROUP where group_sno in (select group_sno from VW_USER_GROUP where user_cd = '$userCd')";
 
+        $command = $this->connection->createCommand($sql);
+        $rows = $command->queryAll();
+        return $rows;
+    }
+
+    public function getGroupCustomers($groupSno)
+    {
+        $sql = "select * from vw_dp_group_customer_AUM where group_sno = ".$groupSno;
+        $command = $this->connection->createCommand($sql);
+        $rows = $command->queryAll();
+        return $rows;
+    }
+
+    public function getGroupCustomerFundAum($groupSno,$fundCode)
+    {
+        $sql = "select * from vw_dp_group_customer_AUM where group_sno = ".$groupSno." and fund_code = '$fundCode'";
+        $command = $this->connection->createCommand($sql);
+        $rows = $command->queryAll();
+        return $rows;
+    }
+
+
+
+    public function getFundAum($fundCode)
+    {
+        $sql = "select * from vw_dp_fund_AUM where fund_code = '$fundCode'";
+        $command = $this->connection->createCommand($sql);
+        $rows = $command->queryAll();
+        return $rows;
+    }
+
+    public function getTransactionTrack($accountCode,$transDate)
+    {
+        $sql = "select * from vw_dp_trans_track where account_code =$accountCode and transaction_date = '$transDate'";
+        $command = $this->connection->createCommand($sql);
+        $rows = $command->queryAll();
+        return $rows;
+    }
+
+    public function getTransactionKeyword($keyword,$keyword1,$keyword2,$keyword3)
+    {
+        $sql = "select func_get_keywordtext_DP ('$keyword', '$keyword1', '$keyword2', '$keyword3') from dual";
         $command = $this->connection->createCommand($sql);
         $rows = $command->queryAll();
         return $rows;

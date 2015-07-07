@@ -33,12 +33,12 @@ class UserController extends AuthController
             $this->setResponse($response);
         }
 
-        $model = new User();
-        $result = $model->changePassword($post['userEmail'],$post['userPass'],$post['newPass']);
+
+        $result = $this->model->changePassword($post['userEmail'],$post['userPass'],$post['newPass']);
         $response['code'] = "401";
         if($result == "TRUE")
         {
-            $model->addLog("change_password",$post['userEmail']." changed password");
+            $this->model->addLog("change_password",$post['userEmail']." changed password");
             $response['code'] = "200";
         }
 
@@ -47,10 +47,8 @@ class UserController extends AuthController
 
     public function actionCgtpre()
     {
-
         $post = Yii::$app->request->post();
         $response = array();
-
 
         $post = Yii::$app->request->post();
 
@@ -64,13 +62,13 @@ class UserController extends AuthController
         $post['unitPercent'] = (isset($post['unitPercent']) ? $post['unitPercent'] : '');
         $post['unit'] = (isset($post['unit']) ? $post['unit'] : '');
 
-        $model = new User();
+
         //$c= $this->ociConnect();
 
         $ociLib = new OciLib();
         $c = $ociLib->ociConnect(Yii::$app->params['DB_USER'], Yii::$app->params['DB_PASS'], Yii::$app->params['DB_NAME']);
 
-        $response['data'] = $model->getCgtPre($post['custAccCode'],$post['planCode'],$post['unitType'],$post['typeValue'],$post['amount'],$post['unitPercent'],$post['unit'],$post['navDate'],$c);
+        $response['data'] = $this->model->getCgtPre($post['custAccCode'],$post['planCode'],$post['unitType'],$post['typeValue'],$post['amount'],$post['unitPercent'],$post['unit'],$post['navDate'],$c);
         if($response['data'] !== false)
         {
             $response['code'] = "200";
@@ -89,22 +87,22 @@ class UserController extends AuthController
             $this->setResponse($response);
         }
 
-        $model = new User();
+
         //$c = $this->ociConnect();
 
         $ociLib = new OciLib();
         $c = $ociLib->ociConnect(Yii::$app->params['DB_USER'], Yii::$app->params['DB_PASS'], Yii::$app->params['DB_NAME']);
 
-        $response['data'] = $model->getCgtPost($post['custAccCode'],$post['transactionSno'],$post['transactionType'],$c);
+        $response['data'] = $this->model->getCgtPost($post['custAccCode'],$post['transactionSno'],$post['transactionType'],$c);
         $this->setResponse($response);
     }
 
     public function actionCustomers_data()
     {
         $post = Yii::$app->request->post();
-        $model = new User();
 
-        $userCd = $model->getUserCdByToken($this->authToken);
+
+        $userCd = $this->model->getUserCdByToken($this->authToken);
         $accountCode = (isset($post['accountCode']) ? $post['accountCode'] : "");
         $accountName = (isset($post['accountName']) ? $post['accountName'] : "");
         $cnic = (isset($post['cnic']) ? $post['cnic'] : "");
@@ -114,7 +112,7 @@ class UserController extends AuthController
         $zakatExempted = (isset($post['zakatExempted']) ? $post['zakatExempted'] : "");
         $phone = (isset($post['phone']) ? $post['phone'] : "");
 
-        $response = $model->getCustomersList($userCd,$accountCode,$accountName,$cnic,$email,$cgtExempted,$zakatExempted,$phone);
+        $response = $this->model->getCustomersList($userCd,$accountCode,$accountName,$cnic,$email,$cgtExempted,$zakatExempted,$phone);
         if($response)
         {
             $this->setResponse($response);
@@ -134,9 +132,9 @@ class UserController extends AuthController
             $response['code'] = "400";
             $this->setResponse($response);
         }
-        $model = new User();
-        $gsno = $model->getUserGroupSno($post['userCd']);
-        $response = $model->getEarnedValue($gsno['GROUP_SNO']);
+
+        $gsno = $this->model->getUserGroupSno($post['userCd']);
+        $response = $this->model->getEarnedValue($gsno['GROUP_SNO']);
         $this->setResponse($response);
     }
 
@@ -375,7 +373,7 @@ exit;
         }
 
         /*$post = Yii::$app->request->post();
-        $model = new User();
+
         $response = $model->getEarnedValue();
         $this->setResponse($response);exit;
         $this->debug($res);*/
@@ -387,7 +385,6 @@ exit;
             ->setTextBody("Hi Mohsin")
             ->send();*/
     }
-
 
 ////////////////////////////////////////////
     public static function resultToJson($response)
@@ -426,7 +423,6 @@ exit;
         if(isset($post['accessKey']) && !empty($post['accessKey']) && isset($post['fromDate']) && !empty($post['fromDate']) && isset($post['toDate']) && !empty($post['toDate']) && isset($post['RegNo']) && !empty($post['RegNo']) && isset($post['toPlanCode']) && !empty($post['toPlanCode']) && isset($post['fromFundCode']) && !empty($post['fromFundCode']) && isset($post['toFundCode']) && !empty($post['toFundCode']) && isset($post['fromUnitType']) && !empty($post['fromUnitType']) && isset($post['toUnitType']) && !empty($post['toUnitType']) && isset($post['isProvision']) && !empty($post['isProvision']) && isset($post['reportType']) && !empty($post['reportType']))
         {
 
-            $post = Yii::$app->request->post();
             if(empty($post['accountNo']) || empty($post['customerId']))
             {
                 $response['code'] = "400";
@@ -530,16 +526,16 @@ exit;
     public function actionForgotpass()
     {
         $post = Yii::$app->request->post();
-        $model = new User();
+
         if( empty($post['userEmail']) )
         {
             $response['code'] = "400";
             $this->setResponse($response);
         }
 
-        if($model->forgotPass($post['userEmail']))
+        if($this->model->forgotPass($post['userEmail']))
         {
-            $model->addLog("forgot_password",$post['userEmail']." requested for forgot password");
+            $this->model->addLog("forgot_password",$post['userEmail']." requested for forgot password");
             $response['code'] = "200";
         }
         $this->setResponse($response);
@@ -548,31 +544,28 @@ exit;
     public function actionCodeverify()
     {
         $post = Yii::$app->request->post();
-        $model = new User();
-
         if(empty($post['userEmail']) || empty($post['codeVerify']) || empty($post['newPass']) )
         {
             $response['code'] = "400";
             $this->setResponse($response);
-            exit;
         }
-        if($model->validateEmail($post['userEmail']))
+        if($this->model->validateEmail($post['userEmail']))
         {
-            if($model->codeVarify($post['userEmail'],$post['codeVerify'],$post['newPass']))
+            if($this->model->codeVarify($post['userEmail'],$post['codeVerify'],$post['newPass']))
             {
                 $response['code'] = "200";
-                $model->addLog("code_verify",$post['userEmail']." verified code successfully for forgot password");
+                $this->model->addLog("code_verify",$post['userEmail']." verified code successfully for forgot password");
             }
             else
             {
-                $model->addLog("code_verify",$post['userEmail']." can not verify code for forgot password");
+                $this->model->addLog("code_verify",$post['userEmail']." can not verify code for forgot password");
                 $response['code'] = "403";
             }
         }
         else
         {
             $response['code'] = "403";
-            $model->addLog("code_verify",$post['userEmail']." email can not be verified for forgot password");
+            $this->model->addLog("code_verify",$post['userEmail']." email can not be verified for forgot password");
         }
         $this->setResponse($response);
     }
@@ -586,39 +579,39 @@ exit;
             $this->setResponse($response);
         }
 
-        $model = new User();
-        $response = $model->getSalesEntityGroup($post['groupCode']);
+
+        $response = $this->model->getSalesEntityGroup($post['groupCode']);
         $this->setResponse($response);
     }
 
     public function actionSalesentitygroupdtl()
     {
-        $model = new User();
-        $response = $model->getSalesEntityGroupDtl();
+
+        $response = $this->model->getSalesEntityGroupDtl();
         $this->setResponse($response);
     }
 
     public function actionCommissionstructure_mf()
     {
         $post = Yii::$app->request->post();
-        $model = new User();
-        $response = $model->getCommissionStructureMF($post['groupCode']);
+
+        $response = $this->model->getCommissionStructureMF($post['groupCode']);
         $this->setResponse($response);
     }
 
     public function actionCommissionstructure_fl()
     {
         $post = Yii::$app->request->post();
-        $model = new User();
-        $response = $model->getCommissionStructureFL($post['groupCode']);
+
+        $response = $this->model->getCommissionStructureFL($post['groupCode']);
         $this->setResponse($response);
     }
 
     public function actionCustomers_list()
     {
         $post = Yii::$app->request->post();
-        $model = new User();
-        $response = $model->getCustomersList($post['groupCode']);
+
+        $response = $this->model->getCustomersList($post['groupCode']);
         $this->setResponse($response);
     }
 
@@ -632,8 +625,8 @@ exit;
             $this->setResponse($response);
         }
 
-        $model = new User();
-        $result = $model->logout($post['authToken']);
+
+        $result = $this->model->logout($post['authToken']);
 
         foreach($result[0] as $res)
         {
@@ -661,19 +654,20 @@ exit;
         $this->setResponse($response);
     }
 
-    public function changeDistributor()
+    public function actionChangedistributor()
     {
-        $post = Yii::$app->request->post();
-        $model = new User();
-        $response = $model->changeDistributor($post['email'],$post['dp_code']);
-        if($response)
+        $request = Yii::$app->request;
+        $userEmail = $request->getBodyParam('userEmail');
+        $dpCode = $request->getBodyParam('dpCode');
+
+        if( empty($userEmail) || empty($dpCode) )
         {
-            $response['code'] = "200";
-        }
-        else {
-            $response['code'] = "403";
+            $response['code'] = "400";
+            $this->setResponse($response);
         }
 
+        $this->model->changeDistributor($userEmail,$dpCode);
+        $response['code'] = "200";
         $this->setResponse($response);
     }
 
@@ -685,15 +679,24 @@ exit;
             $response['code'] = "400";
             $this->setResponse($response);
         }
-        $response = $this->model->getAumrep($post['fromDate']);
+        $result = $this->model->getAumrep($post['fromDate']);
 
-        if($response)
+        //$result = "http://10.4.29.17:7778/reports/rwservlet?LEDGER&report=D:\imPro_11g\Forms\AGENT_HOLD.rep&&server=rep_standalone_2&DESNAME=D:\Oracle\Middleware\asinst_1\config\OHS\ohs1\htdocs\OIS-SOA\03-JUL-15-H8HASPY2BG03072015121613.pdf&DESFORMAT=PDF&DESTYPE=file&P_AS_ON_DATE=03-JUL-15&p_userid='WEB'&BUFFERS=9999";
+        if($result)
         {
-
             $response['code'] = "200";
-            if (substr($response, -3) == 'pdf')
+            $urlArray = explode("&",$result);
+            foreach($urlArray as $uri)
             {
-                $file = file_get_contents($response);
+                $checkUri = substr($uri,0,7);
+                if($checkUri == "DESNAME")
+                {
+                    $report = str_replace("DESNAME=","",$uri);
+                }
+            }
+            if (substr($report, -3) == 'pdf')
+            {
+                $file = file_get_contents("'".$report."'");
                 $fileName = "pdfReport.pdf";//basename($fileUrl);
 
                 $date = date("Ymdhis");
@@ -721,7 +724,6 @@ exit;
         $this->setResponse($response);
     }
 
-
     public function actionDalrep()
     {
         $post = Yii::$app->request->post();
@@ -731,14 +733,23 @@ exit;
             $this->setResponse($response);
         }
 
-        $response = $this->model->getDalrep($post['fromDate'],$post['toDate'],$post['p_ic']);
-        if($response)
+        $result = $this->model->getDalrep($post['fromDate'],$post['toDate'],$post['p_ic']);
+        //$result = "http://10.4.29.17:7778/reports/rwservlet?LEDGER&report=D:\imPro_11g\Forms\DAL_SAL_REP.rep&&server=rep_standalone_2&DESNAME=D:\Oracle\Middleware\asinst_1\config\OHS\ohs1\htdocs\OIS-SOA\03-JUL-15-K3UR9P8B9003072015121721.pdf&DESFORMAT=PDF&DESTYPE=file&P_FROM_DATE=03-JUL-15&P_TO_DATE=03-JUL-15&P_IC=MULTAN IC&p_userid='WEB'  ";
+        if($result)
         {
-
             $response['code'] = "200";
-            if (substr($response, -3) == 'pdf')
+            $urlArray = explode("&",$result);
+            foreach($urlArray as $uri)
             {
-                $file = file_get_contents($response);
+                $checkUri = substr($uri,0,7);
+                if($checkUri == "DESNAME")
+                {
+                   $report = str_replace("DESNAME=","",$uri);
+                }
+            }
+            if (substr($report, -3) == 'pdf')
+            {
+                $file = file_get_contents("'".$report."'");
                 $fileName = "pdfReport.pdf";//basename($fileUrl);
 
                 $date = date("Ymdhis");
@@ -763,27 +774,36 @@ exit;
         else {
             $response['code'] = "403";
         }
+        $this->setResponse($response);
     }
 
     public function actionCprnrep()
     {
         $post = Yii::$app->request->post();
-        $response = $this->model->getCprnrep();
 
         if( empty($post['fromDate'])  && empty($post['toDate']) && empty($post['custAccCode']) && empty($post['fundCode']) )
         {
             $response['code'] = "400";
             $this->setResponse($response);
         }
-
-        if($response)
+        $result = $this->model->getCprnrep($post['fromDate'],$post['toDate'],$post['custAccCode'],$post['fundCode']);
+        if($result)
         {
-
             $response['code'] = "200";
-            if (substr($response, -3) == 'pdf')
+            $urlArray = explode("&",$result);
+            foreach($urlArray as $uri)
             {
-                $file = file_get_contents($response);
-                $fileName = "pdfReport.pdf";//basename($fileUrl);
+                $checkUri = substr($uri,0,7);
+                if($checkUri == "DESNAME")
+                {
+                    $report = str_replace("DESNAME=","",$uri);
+                }
+            }
+            if (substr($report, -3) == 'pdf')
+            {
+                $file = file_get_contents("'".$report."'");
+                $fileName = "pdfReport.pdf";
+                //basename($fileUrl);
 
                 $date = date("Ymdhis");
                 if(file_put_contents("../../".Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName, $file))
@@ -807,6 +827,7 @@ exit;
         else {
             $response['code'] = "403";
         }
+        $this->setResponse($response);
     }
 
     public function actionAllgroupmembers()
@@ -822,13 +843,84 @@ exit;
         {
             $response['code'] = '200';
             $response['data'] = $res;
-            $this->setResponse($response);
         }
         else
         {
             $response['code'] = '403';
+        }
+        $this->setResponse($response);
+    }
+
+    public function actionGroupcustomers()
+    {
+        $post = Yii::$app->request->post();
+        if( empty($post['groupSno']))
+        {
+            $response['code'] = '400';
             $this->setResponse($response);
         }
+
+        $data = $this->model->getGroupCustomers($post['groupSno']);
+        $response['code'] = '200';
+        $response['data'] = $data;
+        $this->setResponse($response);
+    }
+
+    public function actionGroupcustomersfundaum()
+    {
+        $post = Yii::$app->request->post();
+        if( empty($post['groupSno']) || empty($post['fundCode']))
+        {
+            $response['code'] = '400';
+            $this->setResponse($response);
+        }
+
+        $data = $this->model->getGroupCustomerFundAum($post['groupSno'],$post['fundCode']);
+        $response['code'] = '200';
+        $response['data'] = $data;
+        $this->setResponse($response);
+    }
+
+        public function actionAlloverfundaum()
+    {
+        $post = Yii::$app->request->post();
+        if( empty($post['fundCode']))
+        {
+            $response['code'] = '400';
+            $this->setResponse($response);
+        }
+        $data = $this->model->getFundAum($post['fundCode']);
+        $response['code'] = '200';
+        $response['data'] = $data;
+        $this->setResponse($response);
+    }
+
+    public function actionTransactiontrack()
+    {
+        $post = Yii::$app->request->post();
+        if( empty($post['accountCode']) || empty($post['transDate']))
+        {
+            $response['code'] = '400';
+            $this->setResponse($response);
+        }
+        $data = $this->model->getTransactionTrack($post['accountCode'],$post['transDate']);
+        $response['code'] = '200';
+        $response['data'] = $data;
+        $this->setResponse($response);
+    }
+
+    public function actionTransactionkeyword()
+    {
+        $post = Yii::$app->request->post();
+        if( empty($post['keyword']) || empty($post['keyword1']) || empty($post['keyword2']))
+        {
+            $response['code'] = '400';
+            $this->setResponse($response);
+        }
+        $data = $this->model->getTransactionKeyword($post['keyword'],$post['keyword1'],$post['keyword2'],$post['keyword3']);
+        $response['code'] = '200';
+        $response['data'] = $data;
+        $this->setResponse($response);
     }
 
     public function debug($array)
