@@ -137,8 +137,6 @@ class AuthController extends ActiveController
         }
     }
 
-
-
     public function setResponse($response)
     {
         if (isset($_SERVER['HTTP_ORIGIN'])) {

@@ -167,225 +167,6 @@ class UserController extends AuthController
         //echo $res;
     }
 
-    public function test2()
-    {
-        $xmlObj = simplexml_load_string($fileUrl);
-        $this->debug($fileUrl);
-
-        if ($xmlObj) {
-            echo "Failed loading XML\n";
-            foreach(libxml_get_errors() as $error) {
-                echo "\t", $error->message;
-            }
-        }
-        else{
-            echo $username = (string) $xmlObj->NewDataSet->Table1;
-        }exit;
-
-        //$this->resultToJson($fileUrl);exit;
-        //$this->debug($fileUrl);exit;
-        $data = simplexml_load_string($fileUrl);
-        print $data['NewDataSet']['Table1'];
-        print $data->NewDataSet->asXML(); exit;
-        print $data->asXML();exit;
-        echo $data->children('DataSet', true)->asXML();exit;
-        $this->debug($fileUrl);exit;
-
-        $xml = simplexml_load_string($fileUrl);
-        $json = json_encode($xml);
-        $array = json_decode($json,TRUE);
-        var_dump($xml);exit;
-
-
-       /* $array = json_encode($fileUrl);
-        echo $array;
-        exit;
-        $json = json_encode($xml);*/
-        $p = xml_parser_create();
-        xml_parse_into_struct($p, $fileUrl, $vals, $index);
-        xml_parser_free($p);
-        echo "Index array\n";
-        print_r($index['TABLE1']);
-        echo "\nVals array\n";
-        print_r($vals['TABLE1']);
-        exit;
-
-
-        $xml=simplexml_load_string($fileUrl );
-        print_r($xml);
-        foreach( libxml_get_errors() as $error ) {
-            print_r($error);
-        }
-        exit;
-        $fileName = "abc3.xml";
-        if(file_put_contents($fileName, $fileUrl))
-        {
-            $xml = simplexml_load_file($fileName);
-            //or die("Error: Cannot create object");
-            foreach(libxml_get_errors() as $error) {
-                echo $error->message , '(',  $error->file , ':' ,  $error->line , ')<br>';
-            }
-            die;
-
-            foreach($xml->children() as $books){
-                foreach($books->children() as $book => $data){
-                    var_dump($data);
-                    /*echo $data->id;
-                    echo $data->title;
-                    echo $data->author;*/
-                    echo "<br />";
-                }
-            }
-        }
-
-exit;
-
-
-
-        //$simple = "<para><note>simple note</note></para>";
-        $url = "http://124.29.246.107:1530/Service.asmx?wsdl&accessKey=p0n-k@&accountNo=00008903-1&customerId=00008903&channel=web&type1=&availableHolding=&TransactionType=";
-
-        $client = new \mongosoft\soapclient\Client([
-            'url' => $url,//'http://www.webservicex.com/globalweather.asmx?wsdl',
-            //'url' => "http://124.29.246.107:1530/Service.asmx?wsdl",
-        ]);
-        //$client = Yii::$app->siteApi;
-        //var_dump($client);exit;
-        //$res = $client->GetBalanceDetail('p0n-k@','00008903-1','00008903','web','','','');
-        $res = $client->GetBalanceDetail();
-        var_dump($res->GetBalanceDetailResult);
-        /*foreach($res->GetBalanceDetailResult->any as $any)
-        {
-            $this->debug($any);
-        }*/
-        exit;
-
-
-        $xml = simplexml_load_string($fileUrl);
-        if ($xml === false) {
-            echo "Failed loading XML: ";
-            foreach(libxml_get_errors() as $error) {
-                echo "<br>", $error->message;
-            }
-        } else {
-            print_r($xml);
-        }
-        exit;
-
-        $url = "http://124.29.246.107:1530/Service.asmx?op=GetBalanceDetail?accessKey=p0n-k@&accountNo=00008903-1&customerId=00008903&Channel=web&type1=''&availableHolding=''&transactionType=''";
-
-        $client = new \mongosoft\soapclient\Client([
-            'url' => $url,//'http://www.webservicex.com/globalweather.asmx?wsdl',
-            //'url' => "http://124.29.246.107:1530/Service.asmx?wsdl",
-        ]);
-        //$client = Yii::$app->siteApi;
-        //var_dump($client);exit;
-        $res = $client->GetBalanceDetail('accessKey=p0n-k@','accountNo=00008903-1','customerId=00008903','Channel=web','type1=""','availableHolding=""','transactionType=""');
-        print_r($res);
-        exit;
-
-
-
-        libxml_use_internal_errors(true);
-        $myXMLData = '<?xml version="1.0" encoding="UTF-8"?>
-                    <note>
-                      <to>Tove</to>
-                      <from>Jani</from>
-                      <heading>Reminder</heading>
-                      <body>Dont forget me this weekend!</body>
-                    </note>';
-
-        $url = "http://124.29.246.107:1530/Service.asmx?op=GetBalanceDetail?accessKey=p0n-k@&accountNo=00008903-1&customerId=00008903&Channel=web&type1=''&availableHolding=''&transactionType=''";
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $fileUrl = curl_exec($ch);
-        curl_close($ch);
-        echo $fileUrl;exit;
-       // $file = file_get_contents($fileUrl);
-        $fileName = "abc2.xml";
-
-        if(file_put_contents($fileName, $fileUrl))
-        {
-            if (file_exists("http://localhost/ublfm/api/web/".$fileName)) {
-                $xml = simplexml_load_file("http://localhost/ublfm/api/web/".$fileName);
-                print_r($xml);
-            } else {
-                exit('Failed to open test.xml.');
-            }
-            $xml=simplexml_load_file("http://localhost/ublfm/api/web/".$fileName) or die("Error: Cannot create object");
-            print_r($xml);
-            echo "yes";
-        }
-
-        $post['accessKey'] = "AM";
-        $post['fromDate'] = "2-jun-2015";
-        $post['toDate'] = "20-jun-2015";
-        $post['RegNo'] = "00024554-1";
-        $post['fromPlanCode'] = "000";
-        $post['toPlanCode'] = "999";
-        $post['fromFundCode'] = "000";
-        $post['toFundCode'] = "999";
-        $post['fromUnitType'] = "000";
-        $post['toUnitType'] = "999";
-        $post['isProvision'] = "Y";
-        $post['reportType'] = "7";
-        $this->debug($post);exit;
-
-        //$url = 'http://www.webservicex.com/globalweather.asmx?wsdl';
-        $url = "http://124.29.246.107:1530/Service.asmx/?wsdl";//GetAccountStatement?AccessKey=AM&fromDate=2-jun-2015&toDate=20-jun-2015&RegNo=00024554-1&fromPlanCode=000&toPlanCode=999&fromFundCode=000&toFundCode=999&fromUnitType=000&toUnitType=999&isProvision=Y&reportType=7";
-        /*$ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $data = curl_exec($ch);
-        curl_close($ch);
-        echo $data;
-        exit;*/
-
-        $client = new \mongosoft\soapclient\Client([
-            'url' => $url,//'http://www.webservicex.com/globalweather.asmx?wsdl',
-            //'url' => "http://124.29.246.107:1530/Service.asmx?wsdl",
-        ]);
-        //$client = Yii::$app->siteApi;
-        //var_dump($client);exit;
-        $res = $client->GetAccountStatement($post['accessKey'],$post['fromDate'],$post['toDate'],$post['RegNo'],$post['fromPlanCode'],$post['toPlanCode'],$post['fromFundCode'],$post['toFundCode'],$post['fromUnitType'],$post['toUnitType'],$post['isProvision'],$post['reportType']);
-        print_r($res);
-        exit;
-        //Yii::$app->db->createCommand("SET time_zone = '+5:00'")->execute();exit;
-        $fileUrl = Yii::$app->params['PDF_REPORT_PATH'];
-        //"http://www.urartuuniversity.com/content_images/pdf-sample.pdf";
-        //echo "download:".Yii::$app->params['PDF_REPORT_DOWNLOAD_PATH'];exit;
-
-        $file = file_get_contents($fileUrl);
-        $fileName = basename($fileUrl);
-
-
-        if(file_put_contents("../../".Yii::$app->params['REPORTS']['PDF_REPORT_DOWNLOAD_PATH']."/".$fileName, $file))
-        {
-            echo "yes";
-            //return Setting::getFileDownloadPath() .$fileName;
-        }
-        else
-        {
-            echo "not";
-        }
-
-        /*$post = Yii::$app->request->post();
-
-        $response = $model->getEarnedValue();
-        $this->setResponse($response);exit;
-        $this->debug($res);*/
-        exit;
-        /*\Yii::$app->mail->compose('your_view')
-            ->setFrom([\Yii::$app->params['supportEmail'] => 'Test Mail'])
-            ->setTo('mastermind_mohsin@hotmail.com')
-            ->setSubject('UBL FM - Forgot password' )
-            ->setTextBody("Hi Mohsin")
-            ->send();*/
-    }
-
 ////////////////////////////////////////////
     public static function resultToJson($response)
     {
@@ -862,6 +643,8 @@ exit;
 
         $data = $this->model->getGroupCustomers($post['groupSno']);
         $response['code'] = '200';
+        $brows = $this->model->getBusinessDate();
+        $response['businessDate'] = $brows[0]['KEY_VALUE'];
         $response['data'] = $data;
         $this->setResponse($response);
     }
@@ -883,13 +666,7 @@ exit;
 
         public function actionAlloverfundaum()
     {
-        $post = Yii::$app->request->post();
-        if( empty($post['fundCode']))
-        {
-            $response['code'] = '400';
-            $this->setResponse($response);
-        }
-        $data = $this->model->getFundAum($post['fundCode']);
+        $data = $this->model->getFundAum();
         $response['code'] = '200';
         $response['data'] = $data;
         $this->setResponse($response);
@@ -898,12 +675,12 @@ exit;
     public function actionTransactiontrack()
     {
         $post = Yii::$app->request->post();
-        if( empty($post['accountCode']) || empty($post['transDate']))
+        if( empty($post['accountCode']) || empty($post['fromDate']) || empty($post['toDate']))
         {
             $response['code'] = '400';
             $this->setResponse($response);
         }
-        $data = $this->model->getTransactionTrack($post['accountCode'],$post['transDate']);
+        $data = $this->model->getTransactionTrack($post['accountCode'],$post['fromDate'],$post['toDate']);
         $response['code'] = '200';
         $response['data'] = $data;
         $this->setResponse($response);
@@ -923,10 +700,74 @@ exit;
         $this->setResponse($response);
     }
 
+    public function actionInflowoutflow()
+    {
+        $post = Yii::$app->request->post();
+        if( empty($post['groupSno']) )
+        {
+            $response['code'] = '400';
+            $this->setResponse($response);
+        }
+        $data = $this->model->getInflowOutflow($post['groupSno']);
+        $response['code'] = '200';
+        $response['data'] = $data;
+        $this->setResponse($response);
+    }
+
+    public function actionNotifications()
+    {
+        $post = Yii::$app->request->post();
+        if( empty($post['userCd']) )
+        {
+            $response['code'] = '400';
+            $this->setResponse($response);
+        }
+        $data = $this->model->getUserNotifications($post['userCd']);
+        $response['code'] = '200';
+        $response['data'] = $data;
+        $this->setResponse($response);
+    }
+
+    public function actionNotificationread()
+    {
+        $request = Yii::$app->request;
+        $notificationId = $request->getBodyParam('notificationId');
+        if( empty($notificationId) )
+        {
+            $response['code'] = '400';
+            $this->setResponse($response);
+        }
+        $response['code'] = '200';
+        $this->model->getNotificationRead($notificationId);
+        $this->setResponse($response);
+    }
+
+
     public function debug($array)
     {
         echo "<pre>";
         print_r($array);
         echo "</pre>";
+    }
+
+    public function actionContactus()
+    {
+        $post = Yii::$app->request->post();
+        if( empty($post['msg']) )
+        {
+            $response['code'] = '400';
+            $this->setResponse($response);
+        }
+        $body = "<table border='0' width='50%'>
+                <tr><td>".$post['msg']."</td></tr>
+                </table>";
+        //echo $body;exit;
+
+        \Yii::$app->mail->compose('your_view')
+            ->setFrom([\Yii::$app->params['supportEmail'] => 'Test Mail'])
+            ->setTo(Yii::$app->params['adminEmail'])
+            ->setSubject('Contact Us' )
+            ->setTextBody($body)
+            ->send();
     }
 }
