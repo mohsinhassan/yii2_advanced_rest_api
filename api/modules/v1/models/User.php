@@ -20,7 +20,7 @@ class User extends ActiveRecord
             $rows = $command->queryAll();
             return $rows;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -37,7 +37,7 @@ class User extends ActiveRecord
             return $status;
 
        } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -56,7 +56,7 @@ class User extends ActiveRecord
             $row = oci_fetch_assoc($rc);
             return $row;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -74,7 +74,7 @@ class User extends ActiveRecord
             $row = oci_fetch_assoc($rc);
             return $row;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -94,7 +94,7 @@ class User extends ActiveRecord
                 return false;
             }
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -107,7 +107,7 @@ class User extends ActiveRecord
             $rows = $command->queryAll();
             return $rows[0]['USER_CD'];
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -127,7 +127,7 @@ class User extends ActiveRecord
                 return false;
             }
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -140,7 +140,7 @@ class User extends ActiveRecord
             $rows = $command->queryOne();
             return $rows;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -230,21 +230,10 @@ class User extends ActiveRecord
         );
     }
 
-    public function forgotPass($userEmail)
+    public function forgotPass($userEmail,$mdun)
     {
         try
         {
-            $d=date ("d");
-            $m=date ("m");
-            $y=date ("Y");
-            $t=time();
-            $dmt=$d+$m+$y+$t;
-            $ran= rand(0,10000000);
-            $dmtran= $dmt+$ran;
-            $un=  uniqid();
-            $dmtun = $dmt.$un;
-            $mdun = md5($dmtran.$un);
-            $sort=substr($mdun, 16); // if you want sort length code.
             $userCd = $this->getUserCd($userEmail);
 
             //$selRows = $this->getVerifyCodeExpireMinutes();
@@ -252,22 +241,13 @@ class User extends ActiveRecord
             $ua=$this->getBrowser();
             $OS =  $ua['platform'];
             $browser =  $ua['name']. " " . $ua['version'];
-            $sql = "insert into pa_dp_password_request values (".date("dis").",'".$userCd."',to_date('".date('Y-m-d H:i:s')."','yyyy-mm-dd HH24:MI:SS'),'".$_SERVER['REMOTE_ADDR']."','".$browser."','".$OS."','".substr($mdun,0,19)."',0)";
+            $sql = "insert into pa_dp_password_request values (".date("dis").",'".$userCd."',to_date('".date('Y-m-d H:i:s')."','yyyy-mm-dd HH24:MI:SS'),'".$_SERVER['REMOTE_ADDR']."','".$browser."','".$OS."','".$mdun."',0)";
 
             $command = $this->connection->createCommand($sql);
             $rows = $command->execute();
-
-            /* \Yii::$app->mail->compose('your_view')
-                ->setFrom([\Yii::$app->params['supportEmail'] => 'Test Mail'])
-                ->setTo(Yii::$app->params['adminEmail'])
-                ->setSubject('UBL FM - Forgot password' )
-                ->setTextBody(substr($mdun,0,19))
-                ->send();
-            */
-
             return $rows;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -304,7 +284,7 @@ class User extends ActiveRecord
                 return 0;
             }
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
 
     }
@@ -367,7 +347,7 @@ class User extends ActiveRecord
             $command->execute();
             return $status;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -379,7 +359,7 @@ class User extends ActiveRecord
             $data = $command->queryAll();
             return $data;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -391,7 +371,7 @@ class User extends ActiveRecord
             $data = $command->queryAll();
             return $data;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -403,7 +383,7 @@ class User extends ActiveRecord
             $data = $command->queryAll();
             return $data;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -415,7 +395,7 @@ class User extends ActiveRecord
             $data = $command->queryAll();
             return $data;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -491,7 +471,7 @@ class User extends ActiveRecord
             $data = $commandCust->queryAll();
             return $data;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -503,7 +483,7 @@ class User extends ActiveRecord
             $rows = $command->queryAll();
             return $rows;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -516,7 +496,7 @@ class User extends ActiveRecord
         $rows = $command->queryAll();
         return $rows;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }*/
     private function debug($res)
@@ -560,7 +540,7 @@ class User extends ActiveRecord
             $res = $command->execute();
             return $res;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -571,7 +551,7 @@ class User extends ActiveRecord
             $delCommand = $this->connection->createCommand($delSql);
             $delCommand->execute();
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -583,7 +563,7 @@ class User extends ActiveRecord
             $postCount = $selCommand->queryScalar();
             return $postCount;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -595,7 +575,7 @@ class User extends ActiveRecord
             $selCommand = $this->connection->createCommand($selSql);
             $selCommand->execute();
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -607,7 +587,7 @@ class User extends ActiveRecord
             $selRows = $selCommand->queryAll();
             return $selRows;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -619,7 +599,7 @@ class User extends ActiveRecord
             $selRows = $selCommand->queryAll();
             return $selRows[0]['KEY_VALUE'];
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -631,7 +611,7 @@ class User extends ActiveRecord
             $selRows = $selCommand->queryAll();
             return $selRows;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -641,13 +621,14 @@ class User extends ActiveRecord
             $evntSql = "select event_sno from Pa_Dp_Events where event_desc = '".$event."'";
             $eventCommand = $this->connection->createCommand($evntSql);
             $eventRows = $eventCommand->queryAll();
+            //$this->debug($eventRows);exit;
             $eventSno = $eventRows[0]['EVENT_SNO'];
             $insSql = "insert into PA_DP_LOGS (ACTION_DATE,EVENT_SNO,LOG_DESCRIP) values (to_date('".date("y-m-d H:i:s")."','yyyy-mm-dd HH24:MI:SS'),'$eventSno','$msg')";
             $insCommand = $this->connection->createCommand($insSql);
             $insCommand->execute();
 
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -664,7 +645,7 @@ class User extends ActiveRecord
             $userPrivs = array_unique($userPrivs);
             return $userPrivs;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -698,7 +679,7 @@ class User extends ActiveRecord
             $response['fromDate'] = $fromDate;
             return $response;
         } catch (Exception $e) {
-            echo 'Caught exception: ',  $e->getMessage(), "\n";
+            return  $e->getMessage();
         }
     }
 
@@ -715,32 +696,66 @@ class User extends ActiveRecord
         }
     }
 
-    public function getAumrep($fromDate)
+    public function getAumrep($fromDate,$c)
     {
-        $command = $this->connection->createCommand("select PKG_DP_REP.func_get_aum_rep ('$fromDate') from dual");
-        $response = $command->queryAll();
-        return $response;
+        /*$selRows = $this->getBusinessDate();
+        $fromDate = $selRows[0]['KEY_VALUE'];
+        $fromDate ="01-jan-2015";*/
+        $result = "";
+
+        $command = $this->connection->createCommand("call PKG_DP_REP.proc_get_aum_rep(:P_AS_ON_DATE, :RESULT)");
+        $command->bindParam(':P_AS_ON_DATE', $fromDate, PDO::PARAM_STR);
+        $command->bindParam(':RESULT', $result, PDO::PARAM_STR, 1000);
+        $command->execute();
+        return $result;
     }
 
     public function getDalrep($fromDate,$toDate,$p_ic)
     {
+        /*$selRows = $this->getBusinessDate();
+        $fromDate = $selRows[0]['KEY_VALUE'];
+        $fromDate ="01-jan-2015";*/
+
+        $result = "";
+
+        $command = $this->connection->createCommand("call PKG_DP_REP.PROC_GET_DAL_REP (:P_FROM_DATE, :P_TO_DATE, :P_IC, :P_RESULT)");
+        $command->bindParam(':P_FROM_DATE', $fromDate, PDO::PARAM_STR);
+        $command->bindParam(':P_TO_DATE', $toDate, PDO::PARAM_STR);
+        $command->bindParam(':P_IC', $p_ic, PDO::PARAM_STR);
+        $command->bindParam(':P_RESULT', $result, PDO::PARAM_STR, 1000);
+        $command->execute();
+        return $result;
+
+        /*
         $command = $this->connection->createCommand("select PKG_DP_REP.FUNC_GET_DAL_REP ('$fromDate', '$toDate', '$p_ic') from dual");
         $result = $command->queryAll();
         $response = $result;
-        return $response;
+        return $response;*/
     }
 
     public function getCprnrep($fromDate,$toDate,$customerCode,$fundCode)
     {
-            /*$connection = \Yii::$app->db;
-            $fromDate = "01-jan-2015";
-            $toDate = "31-jan-2015";
-            $result = "";
-            $customerCode = '00025894-1';
-            $fundCode ='ASSF';*/
-            $command = $this->connection->createCommand("select PKG_DP_REP.FUNC_GET_CPRN_REP ('$fromDate', '$toDate', '$customerCode','$fundCode') from dual");
-            $response = $command->queryAll();
-            return $response;
+        $result = "";
+
+        $command = $this->connection->createCommand("call PKG_DP_REP.PROC_GET_CPRN_REP(:P_FROM_DATE, :P_TO_DATE, :P_CUST_ACCT_CODE, :P_FUND_CODE :P_RESULT)");
+        $command->bindParam(':P_FROM_DATE', $fromDate, PDO::PARAM_STR);
+        $command->bindParam(':P_TO_DATE', $toDate, PDO::PARAM_STR);
+        $command->bindParam(':P_CUST_ACCT_CODE', $customerCode, PDO::PARAM_STR);
+        $command->bindParam(':P_FUND_CODE', $fundCode, PDO::PARAM_STR);
+        $command->bindParam(':P_RESULT', $result, PDO::PARAM_STR, 1000);
+        $command->execute();
+        return $result;
+
+        /*$connection = \Yii::$app->db;
+        $fromDate = "01-jan-2015";
+        $toDate = "31-jan-2015";
+        $result = "";
+        $customerCode = '00025894-1';
+        $fundCode ='ASSF';*/
+
+        /*$command = $this->connection->createCommand("select PKG_DP_REP.FUNC_GET_CPRN_REP ('$fromDate', '$toDate', '$customerCode','$fundCode') from dual");
+        $response = $command->queryAll();
+        return $response;*/
     }
 
     public function getAllGroupMembers($userCd)
@@ -777,7 +792,7 @@ class User extends ActiveRecord
 
     public function getTransactionTrack($accountCode,$transDate,$toDate)
     {
-        $sql = "select * from vw_dp_trans_track where account_code =$accountCode and transaction_date > to_date('".$transDate."','dd-mon-yyyy') and transaction_date < to_date('".$toDate."','dd-mon-yyyy')";
+        $sql = "select * from vw_dp_trans_track where account_code ='$accountCode' and transaction_date > to_date('".$transDate."','dd-mon-yyyy') and transaction_date < to_date('".$toDate."','dd-mon-yyyy')";
         $command = $this->connection->createCommand($sql);
         $rows = $command->queryAll();
         return $rows;

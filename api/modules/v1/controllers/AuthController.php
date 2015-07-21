@@ -44,6 +44,7 @@ class AuthController extends ActiveController
             else
             {
                 $result = $this->model->login($post['userEmail'],$post['userPass']);
+
                 foreach($result[0] as $res)
                 {
                     if($res == "TRUE")

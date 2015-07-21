@@ -78,6 +78,7 @@ return [
                         'POST notifications' => 'notifications',
                         'PUT notificationread' => 'notificationread',
                         'POST contactus' => 'contactus',
+                        'POST profilepicture' => 'profilepicture',
                         'POST test' => 'test',
                     ],
                 ],
