@@ -2,7 +2,6 @@
 namespace api\modules\v1\controllers;
 use ocilib\OciLib;
 use Yii;
-use api\modules\v1\models\User;
 use \mongosoft\soapclient\UblClient;
 
 require_once('../../vendor/ocilib/OciLib.php');
@@ -28,15 +27,21 @@ class UserController extends AuthController
             $this->setResponse($response);
         }
 
-        $result = $this->model->changePassword($post['userEmail'],$post['userPass'],$post['newPass']);
-        $response['code'] = "401";
-        if($result == "TRUE")
-        {
-            $this->model->addLog("change_password",$post['userEmail']." changed password");
-            $response['code'] = "200";
-        }
+        try{
+            $result = $this->model->changePassword($post['userEmail'],$post['userPass'],$post['newPass']);
+            $response['code'] = "401";
+            if($result == "TRUE")
+            {
+                $this->model->addLog("change_password",$post['userEmail']." changed password");
+                $response['code'] = "200";
+            }
 
-        $this->setResponse($response);
+            $this->setResponse($response);
+        }
+        catch (Exception $e)
+        {
+            return  $e->getMessage();
+        }
     }
 
     public function actionCgtpre()
@@ -56,14 +61,19 @@ class UserController extends AuthController
 
         $ociLib = new OciLib();
         $c = $ociLib->ociConnect(Yii::$app->params['DB_USER'], Yii::$app->params['DB_PASS'], Yii::$app->params['DB_NAME']);
-
-        $response['data'] = $this->model->getCgtPre($post['custAccCode'],$post['planCode'],$post['unitType'],$post['typeValue'],$post['amount'],$post['unitPercent'],$post['unit'],$post['navDate'],$c);
-        if($response['data'] !== false)
-        {
-            $this->model->addLog("view_report",$post['groupCode']." view CGT pre report");
-            $response['code'] = "200";
+        try{
+            $response['data'] = $this->model->getCgtPre($post['custAccCode'],$post['planCode'],$post['unitType'],$post['typeValue'],$post['amount'],$post['unitPercent'],$post['unit'],$post['navDate'],$c);
+            if($response['data'] !== false)
+            {
+                $this->model->addLog("view_report",$post['groupCode']." view CGT pre report");
+                $response['code'] = "200";
+            }
+            $this->setResponse($response);
         }
-        $this->setResponse($response);
+        catch (Exception $e)
+        {
+            return  $e->getMessage();
+        }
     }
 
     public function actionCgtpost()
@@ -78,14 +88,19 @@ class UserController extends AuthController
 
         $ociLib = new OciLib();
         $c = $ociLib->ociConnect(Yii::$app->params['DB_USER'], Yii::$app->params['DB_PASS'], Yii::$app->params['DB_NAME']);
-
-        $response['data'] = $this->model->getCgtPost($post['custAccCode'],$post['transactionSno'],$post['transactionType'],$c);
-        if($response['data'] !== false)
-        {
-            $this->model->addLog("view_report",$post['groupCode']." view CGT post report");
-            $response['code'] = "200";
+        try{
+            $response['data'] = $this->model->getCgtPost($post['custAccCode'],$post['transactionSno'],$post['transactionType'],$c);
+            if($response['data'] !== false)
+            {
+                $this->model->addLog("view_report",$post['groupCode']." view CGT post report");
+                $response['code'] = "200";
+            }
+            $this->setResponse($response);
         }
-        $this->setResponse($response);
+        catch (Exception $e)
+        {
+            return  $e->getMessage();
+        }
     }
 
     public function actionCustomers_data()
@@ -102,16 +117,22 @@ class UserController extends AuthController
         $zakatExempted = (isset($post['zakatExempted']) ? $post['zakatExempted'] : "");
         $phone = (isset($post['phone']) ? $post['phone'] : "");
 
-        $response = $this->model->getCustomersList($userCd,$accountCode,$accountName,$cnic,$email,$cgtExempted,$zakatExempted,$phone);
-        if($response)
-        {
-            $this->setResponse($response);
-            $this->model->addLog("view_report",$post['groupCode']." view Customer report");
+        try{
+            $response = $this->model->getCustomersList($userCd,$accountCode,$accountName,$cnic,$email,$cgtExempted,$zakatExempted,$phone);
+            if($response)
+            {
+                $this->setResponse($response);
+                $this->model->addLog("view_report",$post['groupCode']." view Customer report");
+            }
+            else
+            {
+                $response['code'] = "403";
+                $this->setResponse($response);
+            }
         }
-        else
+        catch (Exception $e)
         {
-            $response['code'] = "403";
-            $this->setResponse($response);
+            return  $e->getMessage();
         }
     }
 
@@ -125,12 +146,18 @@ class UserController extends AuthController
         }
 
         $gsno = $this->model->getUserGroupSno($post['userCd']);
-        $response = $this->model->getEarnedValue($gsno['GROUP_SNO']);
-        if(!empty($response))
-        {
-            $this->model->addLog("view_report",$post['groupCode']." view load earned report");
+        try{
+            $response = $this->model->getEarnedValue($gsno['GROUP_SNO']);
+            if(!empty($response))
+            {
+                $this->model->addLog("view_report",$post['groupCode']." view load earned report");
+            }
+            $this->setResponse($response);
         }
-        $this->setResponse($response);
+        catch (Exception $e)
+        {
+            return  $e->getMessage();
+        }
     }
 
     public function createResponse($response)
@@ -156,14 +183,18 @@ class UserController extends AuthController
         //'00008903-1'
         $param = array("AccessKey"=>Yii::$app->params['REPORTS']['BALANCE_DETAIL_KEY'],'AccountNo'=>$post['accountNo'],'CustomerId'=>$post['customerId'],'Channel'=>Yii::$app->params['REPORTS']['BALANCE_DETAIL_CHANNEL'],'Type1'=>'','AvailableHolding'=>'','TransactionType'=>'');
         $res = $client->GetBalanceDetail($param);
-
-        $res = $this->resultToJson($res->GetBalanceDetailResult);
-        if(!empty($res))
-        {
-            $this->model->addLog("view_report",$post['groupCode']." view balance detail report");
+        try{
+            $res = $this->resultToJson($res->GetBalanceDetailResult);
+            if(!empty($res))
+            {
+                $this->model->addLog("view_report",$post['groupCode']." view balance detail report");
+            }
+            $this->setResponse($res);
         }
-
-        $this->setResponse($res);
+        catch (Exception $e)
+        {
+            return  $e->getMessage();
+        }
     }
 
     ////////////////////////////////////////////
@@ -205,19 +236,6 @@ class UserController extends AuthController
         {
 
             $post = Yii::$app->request->post();
-            /*if(empty($post['RegNo']) )
-            {
-                $response['code'] = "400";
-                $this->setResponse($response);
-            }*/
-
-            /*$client = new \mongosoft\soapclient\UblClient([
-                'url' => Yii::$app->params['REPORTS']['SOAP_SERVICE_URL'],
-            ]);
-            $param = array("AccessKey"=>Yii::$app->params['REPORTS']['CUSTOMER_REPORT_KEY'],'FromDate'=>$post['fromDate'],'ToDate'=>$post['toDate'],'RegNo'=>$post['RegNo'],'FromPlanCode'=>$post['fromPlanCode'],'ToPlanCode'=>$post['toPlanCode'],'FromFundCode'=>$post['fromFundCode'],'ToFundCode'=>$post['toFundCode'],'FromUnitType'=>$post['fromUnitType'],'ToUnitType'=> $post['toUnitType'],'IsProvision'=>$post['isProvision'],'ReportType'=>$post['reportType']);
-            $res = $client->GetAccountStatement($param);
-
-            $fileUrl = json_encode($this->resultToJson($res->GetBalanceDetailResult));*/
 
             $url = Yii::$app->params['REPORTS']['CUSTOMER_SERVICE_URL']."GetAccountStatement?AccessKey=".$post['accessKey']."&fromDate=".$post['fromDate']."&toDate=".$post['toDate']."&RegNo=".$post['RegNo']."&fromPlanCode=".$post['toPlanCode']."&toPlanCode=".$post['toPlanCode']."&fromFundCode=".$post['fromFundCode']."&toFundCode=".$post['toFundCode']."&fromUnitType=".$post['fromUnitType']."&toUnitType=".$post['toUnitType']."&isProvision=".$post['isProvision']."&reportType=".$post['reportType'];
             $ch = curl_init($url);
@@ -280,20 +298,18 @@ class UserController extends AuthController
         $mdun = md5($dmtran.$un);
         $sort=substr($mdun, 16); // if you want sort length code.
         $mdun = substr($mdun,0,19);
-
-        if($this->model->forgotPass($post['userEmail'],$mdun))
-        {
-            $this->model->addLog("forgot_password",$post['userEmail']." requested for forgot password");
-            $response['code'] = "200";
+        try{
+            if($this->model->forgotPass($post['userEmail'],$mdun))
+            {
+                $this->model->addLog("forgot_password",$post['userEmail']." requested for forgot password");
+                $response['code'] = "200";
+            }
+            $this->sendEmail('UBL FM - Forgot password' ,$mdun);
         }
-
-        \Yii::$app->mail->compose('your_view')
-            ->setFrom([\Yii::$app->params['supportEmail'] => 'Test Mail'])
-            ->setTo(Yii::$app->params['adminEmail'])
-            ->setSubject('UBL FM - Forgot password' )
-            ->setTextBody($mdun)
-            ->send();
-        $this->setResponse($response);
+        catch (Exception $e)
+        {
+        return  $e->getMessage();
+        }
     }
 
     public function actionCodeverify()
@@ -333,50 +349,78 @@ class UserController extends AuthController
             $response['code'] = "400";
             $this->setResponse($response);
         }
-        $response = $this->model->getSalesEntityGroup($post['groupCode']);
-        if(!empty($response))
-        {
-            $this->model->addLog("view_report",$post['groupCode']." view sales entity report");
+
+        try{
+            $response = $this->model->getSalesEntityGroup($post['groupCode']);
+            if(!empty($response))
+            {
+                $this->model->addLog("view_report",$post['groupCode']." view sales entity report");
+            }
+            $this->setResponse($response);
         }
-        $this->setResponse($response);
+        catch (Exception $e)
+        {
+            return  $e->getMessage();
+        }
     }
 
     public function actionSalesentitygroupdtl()
     {
-        $response = $this->model->getSalesEntityGroupDtl();
-        $this->setResponse($response);
+        try{
+            $response = $this->model->getSalesEntityGroupDtl();
+            $this->setResponse($response);
+        }
+        catch (Exception $e)
+        {
+            return  $e->getMessage();
+        }
     }
 
     public function actionCommissionstructure_mf()
     {
         $post = Yii::$app->request->post();
-
-        $response = $this->model->getCommissionStructureMF($post['groupCode']);
-        if(!empty($response))
-        {
-            $this->model->addLog("view_report",$post['groupCode']." view commission structure management fees report");
+        try{
+            $response = $this->model->getCommissionStructureMF($post['groupCode']);
+            if(!empty($response))
+            {
+                $this->model->addLog("view_report",$post['groupCode']." view commission structure management fees report");
+            }
+            $this->setResponse($response);
         }
-        $this->setResponse($response);
+        catch (Exception $e)
+        {
+            return  $e->getMessage();
+        }
     }
 
     public function actionCommissionstructure_fl()
     {
         $post = Yii::$app->request->post();
-
-        $response = $this->model->getCommissionStructureFL($post['groupCode']);
-        if(!empty($response))
-        {
-            $this->model->addLog("view_report",$post['groupCode']." view commission structure frontend load report");
+        try{
+            $response = $this->model->getCommissionStructureFL($post['groupCode']);
+            if(!empty($response))
+            {
+                $this->model->addLog("view_report",$post['groupCode']." view commission structure frontend load report");
+            }
+            $this->setResponse($response);
         }
-        $this->setResponse($response);
+        catch (Exception $e)
+        {
+            return  $e->getMessage();
+        }
     }
 
     public function actionCustomers_list()
     {
         $post = Yii::$app->request->post();
-
-        $response = $this->model->getCustomersList($post['groupCode']);
-        $this->setResponse($response);
+        try{
+            $response = $this->model->getCustomersList($post['groupCode']);
+            $this->setResponse($response);
+        }
+        catch (Exception $e)
+        {
+            return  $e->getMessage();
+        }
     }
 
     public function actionLogout()
@@ -438,6 +482,21 @@ class UserController extends AuthController
         $this->setResponse($response);
     }
 
+    public function requestToSavePdf($link)
+    {
+        $link = trim($link);
+        $link = str_replace ( ' ', '%20', $link);
+        $ch = curl_init($link);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 50);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 50);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        if(!curl_exec($ch)){
+            die('Error: "' . curl_error($ch) . '" - Code: ' . curl_errno($ch));
+        }
+        curl_close($ch);
+    }
+
     public function actionAumrep()
     {
         $post = Yii::$app->request->post();
@@ -446,73 +505,13 @@ class UserController extends AuthController
             $response['code'] = "400";
             $this->setResponse($response);
         }
-        $ociLib = new OciLib();
-        $c = $ociLib->ociConnect(Yii::$app->params['DB_USER'], Yii::$app->params['DB_PASS'], Yii::$app->params['DB_NAME']);
-
-        $result = $this->model->getAumrep($post['fromDate'],$c);
-        //$result = "http://10.4.29.17:7778/reports/rwservlet?LEDGER&report=D:\imPro_11g\Forms\AGENT_HOLD.rep&&server=rep_standalone_2&DESNAME=D:\Oracle\Middleware\asinst_1\config\OHS\ohs1\htdocs\OIS-SOA\03-JUL-15-H8HASPY2BG03072015121613.pdf&DESFORMAT=PDF&DESTYPE=file&P_AS_ON_DATE=03-JUL-15&p_userid='WEB'&BUFFERS=9999";
+        $result = $this->model->getAumrep($post['fromDate']);
+        $this->requestToSavePdf($result);
 
         if($result)
         {
             $response['code'] = "200";
-            $urlArray = explode("&",$result);
-            foreach($urlArray as $uri)
-            {
-                $checkUri = substr($uri,0,7);
-                if($checkUri == "DESNAME")
-                {
-                    $report = str_replace("DESNAME=","",$uri);
-                }
-            }
-
-            if (substr($report, -3) == 'pdf')
-            {
-                $pdfStr = Yii::$app->params['DISTRIBUTOR_REPORTS_SERVER'];
-                $reportArray = explode("%5C",urlencode($report));
-                $flag = 0;
-                foreach($reportArray as $ra)
-                {
-                    if(substr($ra,0,7) == "OIS-SOA" || $flag==1)
-                    {
-                        $flag = 1;
-                        $pdfStr.="/".$ra;
-                    }
-                }
-                $pdfStr = urldecode(str_replace("%","%2F",$pdfStr));
-                $pdfStr = urldecode(str_replace("//OIS-SOA","/OIS-SOA",$pdfStr));
-
-                 $report = $pdfStr;
-				/*$report = str_replace('D:\oracle\FRHome_1\Apache\Apache\htdocs',Yii::$app->params['DISTRIBUTOR_REPORTS_SERVER'],$report);
-                $report = str_replace("%2F%5C","%2F",urlencode($report));
-				$report = urldecode($report);
-				$report = str_replace("%5C","%2F",urlencode($report));
-                $report = urldecode($report);*/
-                $report = str_replace('D:\Oracle\Middleware\asinst_1\config\OHS\ohs1\htdocs',Yii::$app->params['DISTRIBUTOR_REPORTS_SERVER'],$report);
-                $report = str_replace("%2F%5C","%2F",urlencode($report));
-                $report = urldecode($report);
-
-                $file = file_get_contents("'".$report."'");
-                $fileName = "pdfReport.pdf";//basename($fileUrl);
-
-                $date = date("Ymdhis");
-                if(file_put_contents("../../".Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName, $file))
-                {
-                    $response['code'] = '200';
-                    $response['url'] =  Yii::$app->params['REPORTS']['REPORT_PATH'].Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName;
-                    $this->model->addLog("view_report",$post['groupCode']." download aum report");
-                    $this->setResponse($response);
-                }
-                else
-                {
-                    $response['code'] = '000';
-                    $this->setResponse($response);
-                }
-            }
-            else
-            {
-                $response['code'] = '-1';
-                $this->setResponse($response);
-            }
+            $this->savePdfToLocal($result);
         }
         else {
             $response['code'] = "403";
@@ -530,59 +529,12 @@ class UserController extends AuthController
         }
 
         $result = $this->model->getDalrep($post['fromDate'],$post['toDate'],$post['p_ic']);
-        //$result = "http://10.4.29.17:7778/reports/rwservlet?LEDGER&report=D:\imPro_11g\Forms\DAL_SAL_REP.rep&&server=rep_standalone_2&DESNAME=D:\Oracle\Middleware\asinst_1\config\OHS\ohs1\htdocs\OIS-SOA\03-JUL-15-K3UR9P8B9003072015121721.pdf&DESFORMAT=PDF&DESTYPE=file&P_FROM_DATE=03-JUL-15&P_TO_DATE=03-JUL-15&P_IC=MULTAN IC&p_userid='WEB'  ";
-        if($result)
-        {
+
+        $this->requestToSavePdf($result);
+
+        if($result){
             $response['code'] = "200";
-            $urlArray = explode("&",$result);
-            foreach($urlArray as $uri)
-            {
-                $checkUri = substr($uri,0,7);
-                if($checkUri == "DESNAME")
-                {
-                   $report = str_replace("DESNAME=","",$uri);
-                }
-            }
-            if (substr($report, -3) == 'pdf')
-            {
-                $pdfStr = Yii::$app->params['DISTRIBUTOR_REPORTS_SERVER'];
-                $reportArray = explode("%5C",urlencode($report));
-                $flag = 0;
-                foreach($reportArray as $ra)
-                {
-                    if(substr($ra,0,7) == "OIS-SOA" || $flag==1)
-                    {
-                        $flag = 1;
-                        $pdfStr.="/".$ra;
-                    }
-                }
-                $pdfStr = urldecode(str_replace("%","%2F",$pdfStr));
-                $pdfStr = urldecode(str_replace("//OIS-SOA","/OIS-SOA",$pdfStr));
-
-                $report = $pdfStr;
-                /////////////////////////
-                $file = file_get_contents("'".$report."'");
-                $fileName = "pdfReport.pdf";//basename($fileUrl);
-
-                $date = date("Ymdhis");
-                if(file_put_contents("../../".Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName, $file))
-                {
-                    $response['code'] = '200';
-                    $response['url'] =  Yii::$app->params['REPORTS']['REPORT_PATH'].Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName;
-                    $this->model->addLog("view_report",$post['groupCode']." download dal report");
-                    $this->setResponse($response);
-                }
-                else
-                {
-                    $response['code'] = '000';
-                    $this->setResponse($response);
-                }
-            }
-            else
-            {
-                $response['code'] = '-1';
-                $this->setResponse($response);
-            }
+            $this->savePdfToLocal($result);
         }
         else {
             $response['code'] = "403";
@@ -600,59 +552,11 @@ class UserController extends AuthController
             $this->setResponse($response);
         }
         $result = $this->model->getCprnrep($post['fromDate'],$post['toDate'],$post['custAccCode'],$post['fundCode']);
-        if($result)
-        {
+        $this->requestToSavePdf($result);
+
+        if($result){
             $response['code'] = "200";
-            $urlArray = explode("&",$result);
-            foreach($urlArray as $uri)
-            {
-                $checkUri = substr($uri,0,7);
-                if($checkUri == "DESNAME")
-                {
-                    $report = str_replace("DESNAME=","",$uri);
-                }
-            }
-            if (substr($report, -3) == 'pdf')
-            {
-                $pdfStr = Yii::$app->params['DISTRIBUTOR_REPORTS_SERVER'];
-                $reportArray = explode("%5C",urlencode($report));
-                $flag = 0;
-                foreach($reportArray as $ra)
-                {
-                    if(substr($ra,0,7) == "OIS-SOA" || $flag==1)
-                    {
-                        $flag = 1;
-                        $pdfStr.="/".$ra;
-                    }
-                }
-                $pdfStr = urldecode(str_replace("%","%2F",$pdfStr));
-                $pdfStr = urldecode(str_replace("//OIS-SOA","/OIS-SOA",$pdfStr));
-
-                $report = $pdfStr;
-
-                $file = file_get_contents("'".$report."'");
-                $fileName = "pdfReport.pdf";
-                //basename($fileUrl);
-
-                $date = date("Ymdhis");
-                if(file_put_contents("../../".Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName, $file))
-                {
-                    $response['code'] = '200';
-                    $response['url'] =  Yii::$app->params['REPORTS']['REPORT_PATH'].Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName;
-                    $this->model->addLog("view_report",$post['groupCode']." download CPRN report");
-                    $this->setResponse($response);
-                }
-                else
-                {
-                    $response['code'] = '000';
-                    $this->setResponse($response);
-                }
-            }
-            else
-            {
-                $response['code'] = '-1';
-                $this->setResponse($response);
-            }
+            $this->savePdfToLocal($result);
         }
         else {
             $response['code'] = "403";
@@ -660,6 +564,68 @@ class UserController extends AuthController
         $this->setResponse($response);
     }
 
+    protected function savePdfToLocal($result)
+    {
+        $urlArray = explode("&",$result);
+        foreach($urlArray as $uri)
+        {
+            $checkUri = substr($uri,0,7);
+            if($checkUri == "DESNAME")
+            {
+                $report = str_replace("DESNAME=","",$uri);
+            }
+        }
+
+        if (substr($report, -3) == 'pdf')
+        {
+            $pdfStr = Yii::$app->params['DISTRIBUTOR_REPORTS_SERVER'];
+            $reportArray = explode("%5C",urlencode($report));
+            $flag = 0;
+            foreach($reportArray as $ra)
+            {
+                if(substr($ra,0,7) == "OIS-SOA" || $flag==1)
+                {
+                    $flag = 1;
+                    $pdfStr.="/".$ra;
+                }
+            }
+            $report = $this->filterPdfStr($pdfStr);
+
+            $fileName = "pdfReport.pdf";
+            $date = date("Ymdhis");
+
+            $content = file_get_contents($report);
+            $save_to = "../../".Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName;
+
+            if(file_put_contents($save_to, $content))
+            {
+                $response['code'] = '200';
+                $response['url'] =  Yii::$app->params['REPORTS']['REPORT_PATH'].Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName;
+                $this->setResponse($response);
+            }
+            else
+            {
+                $response['code'] = '000';
+                $this->setResponse($response);
+            }
+        }
+        else
+        {
+            $response['code'] = '-1';
+            $this->setResponse($response);
+        }
+    }
+
+    protected function filterPdfStr($pdfStr)
+    {
+        $pdfStr = urldecode(str_replace("%","%2F",$pdfStr));
+        $pdfStr = urldecode(str_replace("//OIS-SOA","/OIS-SOA",$pdfStr));
+
+        $report = $pdfStr;
+        $report = str_replace("%2F%5C","%2F",urlencode($report));
+        $report = urldecode($report);
+        return $report;
+    }
     public function actionAllgroupmembers()
     {
         $post = Yii::$app->request->post();
@@ -760,6 +726,7 @@ class UserController extends AuthController
             $response['code'] = '400';
             $this->setResponse($response);
         }
+
         $data = $this->model->getInflowOutflow($post['groupSno']);
         $response['code'] = '200';
         $this->model->addLog("view_report",$post['groupCode']." view inflow outflow report");
@@ -785,13 +752,14 @@ class UserController extends AuthController
     {
         $request = Yii::$app->request;
         $notificationId = $request->getBodyParam('notificationId');
-        if( empty($notificationId) )
+        $userCd = $request->getBodyParam('userCd');
+        if( empty($notificationId) || empty($userCd) )
         {
             $response['code'] = '400';
             $this->setResponse($response);
         }
         $response['code'] = '200';
-        $this->model->getNotificationRead($notificationId);
+        $this->model->getNotificationRead($notificationId,$userCd);
         $this->setResponse($response);
     }
 
@@ -814,12 +782,8 @@ class UserController extends AuthController
                 <tr><td>Message: </td><td>".$post['msg']."</td></tr>
                 </table>";
 
-        \Yii::$app->mail->compose('your_view')
-            ->setFrom($post['userEmail'])
-            ->setTo(Yii::$app->params['adminEmail'])
-            ->setSubject('Contact Us' )
-            ->setTextBody($body)
-            ->send();
+        $this->sendEmail('Contact Us',$body);
+
         $response['code'] = '200';
         $this->setResponse($response);
     }
@@ -842,4 +806,29 @@ class UserController extends AuthController
         $this->model->addLog("change_profile_picture",$post['groupCode']." changed profile picture");
         $this->setResponse($response);
     }
+
+    protected function sendEmail($subject,$body)
+    {
+        \Yii::$app->mail->compose('your_view')
+            ->setFrom([\Yii::$app->params['supportEmail'] => 'Test Mail'])
+            ->setTo(Yii::$app->params['adminEmail'])
+            ->setSubject($subject)
+            ->setTextBody($body)
+            ->send();
+    }
+
+    public function actionGrouptransaction()
+    {
+        $post = Yii::$app->request->post();
+        if( empty($post['userCd']) || empty($post['groupSno']) )
+        {
+            $response['code'] = '400';
+            $this->setResponse($response);
+        }
+        $data = $this->model->getGroupTransactions($post['userCd'],$post['groupSno']);
+        $response['code'] = '200';
+        $response['data'] = $data;
+        $this->setResponse($response);
+    }
+
 }

@@ -84,6 +84,7 @@ class AuthController extends ActiveController
         else
         {
             $userCd = $this->fetchUserCd();
+
             if($this->model->checkAccessToken($userCd,$this->authToken))
             {
                 $this->model->refreshToken($userCd,$this->authToken);

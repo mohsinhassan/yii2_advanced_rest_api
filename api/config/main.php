@@ -79,6 +79,7 @@ return [
                         'PUT notificationread' => 'notificationread',
                         'POST contactus' => 'contactus',
                         'POST profilepicture' => 'profilepicture',
+                        'POST grouptransaction' => 'grouptransaction',
                         'POST test' => 'test',
                     ],
                 ],
