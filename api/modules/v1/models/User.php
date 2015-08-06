@@ -2,7 +2,6 @@
 namespace api\modules\v1\models;
 use \yii\db\ActiveRecord;
 use \yii\db\mssql\PDO;
-//use \yii\db\oci;
 
 class User extends ActiveRecord
 {
@@ -25,7 +24,6 @@ class User extends ActiveRecord
         } catch (Exception $e) {
             return  $e->getMessage();
         }
-
     }
 
     public function changePassword($email,$oldPassword,$newPassword)
@@ -49,7 +47,7 @@ class User extends ActiveRecord
     {
         try
         {
-            $stmt = "BEGIN :return_cursor := PKG_CGT.func_cgt_pre_calc ('".$custAccCode."','".$planCode."','".$unitType."','".$typeValue."','',".$unitPercent.",'','".$navDate."'); end;";
+            $stmt = "BEGIN :return_cursor := PKG_NEW_CGT.func_cgt_pre_calc('".$custAccCode."','".$planCode."','".$unitType."','".$typeValue."','".$amount."','".$unitPercent."','".$unit."','".$navDate."'); end;";
             $s = oci_parse($c,$stmt);
             $rc = oci_new_cursor($c);
 
@@ -68,7 +66,7 @@ class User extends ActiveRecord
     {
         try
         {
-            $stmt = "BEGIN :return_cursor := PKG_CGT.func_cgt_post_calc('".$custAccCode."',".$transactionSno.",'".$transactionType."'); end;";
+            $stmt = "BEGIN :return_cursor := pkg_new_cgt.func_cgt_post_calc('".$custAccCode."',".$transactionSno.",'".$transactionType."'); end;";
             $s = oci_parse($c,$stmt);
             $rc = oci_new_cursor($c);
             oci_bind_by_name($s,':return_cursor',$rc,-1,OCI_B_CURSOR);
@@ -107,7 +105,7 @@ class User extends ActiveRecord
     {
         try
         {
-            $sql = "select USER_CD from pa_dp_session_history where token_code = :token";
+            $sql = "select USER_CD,session_sno from pa_dp_session_history where token_code = :token";
             $command = $this->connection->createCommand($sql);
             $command->bindValue('token',$authToken);
             $rows = $command->queryAll();
@@ -116,6 +114,21 @@ class User extends ActiveRecord
             return  $e->getMessage();
         }
     }
+
+    public function getUserSessionSno($authToken)
+    {
+        try
+        {
+            $sql = "select session_sno from pa_dp_session_history where token_code = :token";
+            $command = $this->connection->createCommand($sql);
+            $command->bindValue('token',$authToken);
+            $rows = $command->queryAll();
+            return $rows[0]['SESSION_SNO'];
+        } catch (Exception $e) {
+            return  $e->getMessage();
+        }
+    }
+
 
     public function getUserCdGroupCode($email)
     {
@@ -247,7 +260,7 @@ class User extends ActiveRecord
             $ua=$this->getBrowser();
             $OS =  $ua['platform'];
             $browser =  $ua['name']. " " . $ua['version'];
-            $sql = "insert into pa_dp_password_request values (".date("dis").", :userCd , to_date('".date('Y-m-d H:i:s')."','yyyy-mm-dd HH24:MI:SS'),:remoteAddress,browser,:OS,:mdun,0)";
+            $sql = "insert into pa_dp_password_request values (".date("dis").", :userCd , to_date('".date('Y-m-d H:i:s')."','yyyy-mm-dd HH24:MI:SS'),:remoteAddress,:browser,:OS,:mdun,0)";
 
             $command = $this->connection->createCommand($sql);
             $command->bindValue('userCd',$userCd);
@@ -491,7 +504,6 @@ class User extends ActiveRecord
     {
         try{
             $selRows = $this->getTokenExpireMinutes();
-            $this->logout($userCd);
 
             $sql = "insert into pa_dp_session_history values (".date('dhis').",:userCd,to_date('".date('Y-m-d H:i:s')."','yyyy-mm-dd HH24:MI:SS'),";
             $sql .= "to_date('".date('Y-m-d ').date('H:i', strtotime('+'.$selRows[0]['KEY_VALUE'].' minutes')).date(':s')."','yyyy-mm-dd HH24:MI:SS'),'active','description',:REMOTE_ADDR,:authToken,";
@@ -519,13 +531,14 @@ class User extends ActiveRecord
         }
     }
 
-    public function checkAccessToken($userCd,$authToken)
+    public function checkAccessToken($userCd,$authToken,$sessionSno)
     {
         try{
-            $selSql = "select token_code from pa_dp_session_history where token_code = :authToken and user_cd=:userCd and ip_address = :ipAddress and status='active' and session_end > to_date('".date('m/d/Y H:i:s')."','mm/dd/yyyy HH24:MI:SS')"; //6/17/2015 12:29:08 AM
+            $selSql = "select token_code from pa_dp_session_history where token_code = :authToken and user_cd=:userCd and ip_address = :ipAddress and  session_sno = :sessionSno and status='active' and session_end > to_date('".date('m/d/Y H:i:s')."','mm/dd/yyyy HH24:MI:SS')"; //6/17/2015 12:29:08 AM
             $selCommand = $this->connection->createCommand($selSql);
             $selCommand->bindValue("authToken",$authToken);
             $selCommand->bindValue("userCd",$userCd);
+            $selCommand->bindValue("sessionSno",$sessionSno);
             $selCommand->bindValue("ipAddress",$_SERVER['REMOTE_ADDR']);
 
             $postCount = $selCommand->queryScalar();
@@ -585,7 +598,7 @@ class User extends ActiveRecord
         }
     }
 
-    public function addLog($event,$msg)
+    public function addLog($event,$msg,$sessionSno='')
     {
         try{
             $evntSql = "select event_sno from Pa_Dp_Events where event_desc = :event";
@@ -593,10 +606,11 @@ class User extends ActiveRecord
             $eventCommand->bindValue("event",$event);
             $eventRows = $eventCommand->queryAll();
             $eventSno = $eventRows[0]['EVENT_SNO'];
-            $insSql = "insert into PA_DP_LOGS (ACTION_DATE,EVENT_SNO,LOG_DESCRIP) values (to_date('".date("y-m-d H:i:s")."','yyyy-mm-dd HH24:MI:SS'),:eventSno,:msg)";
+            $insSql = "insert into PA_DP_LOGS(log_sno,ACTION_DATE,EVENT_SNO,LOG_DESCRIP,SESSION_SNO) values (PA_DP_LOG_SEQ.Nextval,to_date('".date("y-m-d H:i:s")."','yyyy-mm-dd HH24:MI:SS'),:eventSno,:msg,:sessionSno)";
             $insCommand = $this->connection->createCommand($insSql);
             $insCommand->bindValue("eventSno",$eventSno);
             $insCommand->bindValue("msg",$msg);
+            $insCommand->bindValue("sessionSno",$sessionSno);
             $insCommand->execute();
 
         } catch (Exception $e) {
@@ -656,17 +670,23 @@ class User extends ActiveRecord
 
     public function changeDistributor($email,$dpCode)
     {
-        $command = $this->connection->createCommand("call PROC_DP_UPDATE_GP_CODE (:email , :dpCode)");
-        $command->bindValue("email",$email);
-        $command->bindValue("dpCode",$dpCode);
-        if($command->execute())
-        {
-            return true;
+        try{
+            $command = $this->connection->createCommand("call PROC_DP_UPDATE_GP_CODE (:email , :dpCode)");
+            $command->bindValue("email",$email);
+            $command->bindValue("dpCode",$dpCode);
+            if($command->execute())
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
-        else
-        {
-            return false;
+        catch (Exception $e) {
+            return  $e->getMessage();
         }
+
     }
 
     public function getAumrep($fromDate)
@@ -703,112 +723,182 @@ class User extends ActiveRecord
 
     public function getCprnrep($fromDate,$toDate,$customerCode,$fundCode)
     {
-        $result = "";
-
-        $command = $this->connection->createCommand("call PKG_DP_REP.PROC_GET_CPRN_REP(:P_FROM_DATE, :P_TO_DATE, :P_CUST_ACCT_CODE, :P_FUND_CODE :P_RESULT)");
-        $command->bindParam(':P_FROM_DATE', $fromDate, PDO::PARAM_STR);
-        $command->bindParam(':P_TO_DATE', $toDate, PDO::PARAM_STR);
-        $command->bindParam(':P_CUST_ACCT_CODE', $customerCode, PDO::PARAM_STR);
-        $command->bindParam(':P_FUND_CODE', $fundCode, PDO::PARAM_STR);
-        $command->bindParam(':P_RESULT', $result, PDO::PARAM_STR, 1000);
-        $command->execute();
-        return $result;
+        try{
+            $result = "";
+            $command = $this->connection->createCommand("call PKG_DP_REP.PROC_GET_CPRN_REP(:P_FROM_DATE, :P_TO_DATE, :P_CUST_ACCT_CODE, :P_FUND_CODE :P_RESULT)");
+            $command->bindParam(':P_FROM_DATE', $fromDate, PDO::PARAM_STR);
+            $command->bindParam(':P_TO_DATE', $toDate, PDO::PARAM_STR);
+            $command->bindParam(':P_CUST_ACCT_CODE', $customerCode, PDO::PARAM_STR);
+            $command->bindParam(':P_FUND_CODE', $fundCode, PDO::PARAM_STR);
+            $command->bindParam(':P_RESULT', $result, PDO::PARAM_STR, 1000);
+            $command->execute();
+            return $result;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
     }
 
     public function getAllGroupMembers($userCd)
     {
-        $sql = "select * from PA_SALE_ENTITY_GROUP where group_sno in (select group_sno from VW_USER_GROUP where user_cd = :userCd)";
-        $command = $this->connection->createCommand($sql);
-        $command->bindValue("userCd",$userCd);
-        $rows = $command->queryAll();
-        return $rows;
+        try{
+            $sql = "select * from PA_SALE_ENTITY_GROUP where group_sno in (select group_sno from VW_USER_GROUP where user_cd = :userCd)";
+            $command = $this->connection->createCommand($sql);
+            $command->bindValue("userCd",$userCd);
+            $rows = $command->queryAll();
+            return $rows;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
+
     }
 
     public function getGroupCustomers($groupSno)
     {
-        $sql = "select * from vw_dp_group_customer_AUM where group_sno = :groupSno";
-        $command = $this->connection->createCommand($sql);
-        $command->bindValue("groupSno",$groupSno);
-        $rows = $command->queryAll();
-        return $rows;
+        try{
+            $sql = "select * from vw_dp_group_customer_AUM where group_sno = :groupSno";
+            $command = $this->connection->createCommand($sql);
+            $command->bindValue("groupSno",$groupSno);
+            $rows = $command->queryAll();
+            return $rows;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
+
     }
 
     public function getGroupCustomerFundAum($groupSno,$fundCode)
     {
-        $sql = "select * from vw_dp_group_customer_AUM where group_sno = :groupSno and fund_code = :fundCode";
-        $command = $this->connection->createCommand($sql);
-        $command->bindValue("groupSno",$groupSno);
-        $command->bindValue("fundCode",$fundCode);
-        $rows = $command->queryAll();
-        return $rows;
+        try{
+            $sql = "select * from vw_dp_group_customer_AUM where group_sno = :groupSno and fund_code = :fundCode";
+            $command = $this->connection->createCommand($sql);
+            $command->bindValue("groupSno",$groupSno);
+            $command->bindValue("fundCode",$fundCode);
+            $rows = $command->queryAll();
+            return $rows;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
     }
 
     public function getFundAum()
     {
-        $sql = "select * from vw_dp_fund_AUM";
-        $command = $this->connection->createCommand($sql);
-        $rows = $command->queryAll();
-        return $rows;
+        try{
+            $sql = "select * from vw_dp_fund_AUM";
+            $command = $this->connection->createCommand($sql);
+            $rows = $command->queryAll();
+            return $rows;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
+
     }
 
     public function getTransactionTrack($accountCode,$transDate,$toDate)
     {
-        $sql = "select * from vw_dp_trans_track where account_code ='$accountCode' and transaction_date > to_date('".$transDate."','dd-mon-yyyy') and transaction_date < to_date('".$toDate."','dd-mon-yyyy')";
-        $command = $this->connection->createCommand($sql);
-        $command->bindValue("accountCode",$accountCode);
-        $command->bindValue("transDate",$transDate);
-        $command->bindValue("toDate",$toDate);
-        $rows = $command->queryAll();
-        return $rows;
+        try{
+            $sql = "select * from vw_dp_trans_track where account_code ='$accountCode' and transaction_date > to_date('".$transDate."','dd-mon-yyyy') and transaction_date < to_date('".$toDate."','dd-mon-yyyy')";
+            $command = $this->connection->createCommand($sql);
+            $command->bindValue("accountCode",$accountCode);
+            $command->bindValue("transDate",$transDate);
+            $command->bindValue("toDate",$toDate);
+            $rows = $command->queryAll();
+            return $rows;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
     }
 
     public function getTransactionKeyword($keyword,$keyword1,$keyword2,$keyword3)
     {
-        $sql = "select func_get_keywordtext_DP (:keyword, :keyword1, :keyword2, :keyword3) from dual";
-        $command = $this->connection->createCommand($sql);
-        $command->bindValue("keyword",$keyword);
-        $command->bindValue("keyword1",$keyword1);
-        $command->bindValue("keyword2",$keyword2);
-        $command->bindValue("keyword3",$keyword3);
+        try{
+            $sql = "select func_get_keywordtext_DP (:keyword, :keyword1, :keyword2, :keyword3) from dual";
+            $command = $this->connection->createCommand($sql);
+            $command->bindValue("keyword",$keyword);
+            $command->bindValue("keyword1",$keyword1);
+            $command->bindValue("keyword2",$keyword2);
+            $command->bindValue("keyword3",$keyword3);
 
-        $rows = $command->queryAll();
-        return $rows;
+            $rows = $command->queryAll();
+            return $rows;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
     }
 
     public function getInflowOutflow($groupSno)
     {
-        $sql = "select * from vw_dp_inflow_outflow where group_sno = :groupSno";
-        $command = $this->connection->createCommand($sql);
-        $command->bindValue("groupSno",$groupSno);
-        $rows = $command->queryAll();
-        return $rows;
+        try{
+            $sql = "select * from vw_dp_inflow_outflow where group_sno = :groupSno";
+            $command = $this->connection->createCommand($sql);
+            $command->bindValue("groupSno",$groupSno);
+            $rows = $command->queryAll();
+            return $rows;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
     }
 
     public function getUserNotifications($userCd)
     {
-        $sql = "select * from pa_dp_notification where notification_id not in (select notification_id from pa_dp_notification_user where user_id = :userCd ) order by notification_id";
-        $command = $this->connection->createCommand($sql);
-        $command->bindValue("userCd",$userCd);
-        $rows = $command->queryAll();
-        return $rows;
+        try{
+            $sql = "select * from pa_dp_notification where notification_id not in (select notification_id from pa_dp_notification_user where user_id = :userCd ) order by notification_id";
+            $command = $this->connection->createCommand($sql);
+            $command->bindValue("userCd",$userCd);
+            $rows = $command->queryAll();
+            return $rows;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
     }
 
     public function getNotificationRead($notificationId,$userCd)
     {
-        $sql = "insert into pa_dp_notification_user(user_id,notification_id,user_notification) values (:userCd,:notificationId,to_date('".date('d-m-Y')."','dd-mm-yyyy') )";
-        $selCommand = $this->connection->createCommand($sql);
-        $selCommand->bindValue("userCd",$userCd);
-        $selCommand->bindValue("notificationId",$notificationId);
-        $selCommand->execute();
+        try{
+            $sql = "insert into pa_dp_notification_user(user_id,notification_id,user_notification) values (:userCd,:notificationId,to_date('".date('d-m-Y')."','dd-mm-yyyy') )";
+            $selCommand = $this->connection->createCommand($sql);
+            $selCommand->bindValue("userCd",$userCd);
+            $selCommand->bindValue("notificationId",$notificationId);
+            $selCommand->execute();
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
+    }
+
+    public function getAllNotifications()
+    {
+        try{
+            $sql = "select * from pa_dp_notification order by notification_date";
+            $command = $this->connection->createCommand($sql);
+            $rows = $command->queryAll();
+            return $rows;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
     }
 
     public function getGroupTransactions($userCd,$groupSno)
     {
-        $sql = "select * from vw_user_group_transaction where user_cd = :user_cd and group_sno = :group_sno";
-        $selCommand = $this->connection->createCommand($sql);
-        $selCommand->bindValue('user_cd',$userCd);
-        $selCommand->bindValue('group_sno',$groupSno);
-        $rows = $selCommand->queryAll();
-        return $rows;
+        try{
+            $sql = "select * from vw_user_group_transaction where user_cd = :user_cd and group_sno = :group_sno";
+            $selCommand = $this->connection->createCommand($sql);
+            $selCommand->bindValue('user_cd',$userCd);
+            $selCommand->bindValue('group_sno',$groupSno);
+            $rows = $selCommand->queryAll();
+            return $rows;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
     }
 }

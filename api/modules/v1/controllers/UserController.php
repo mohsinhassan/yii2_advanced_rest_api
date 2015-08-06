@@ -27,21 +27,15 @@ class UserController extends AuthController
             $this->setResponse($response);
         }
 
-        try{
-            $result = $this->model->changePassword($post['userEmail'],$post['userPass'],$post['newPass']);
-            $response['code'] = "401";
-            if($result == "TRUE")
-            {
-                $this->model->addLog("change_password",$post['userEmail']." changed password");
-                $response['code'] = "200";
-            }
-
-            $this->setResponse($response);
-        }
-        catch (Exception $e)
+        $result = $this->model->changePassword($post['userEmail'],$post['userPass'],$post['newPass']);
+        $response['code'] = "401";
+        if($result == "TRUE")
         {
-            return  $e->getMessage();
+            $this->model->addLog("change_password",$post['userEmail']." changed password",$post['sessionSno']);
+            $response['code'] = "200";
         }
+
+        $this->setResponse($response);
     }
 
     public function actionCgtpre()
@@ -61,25 +55,21 @@ class UserController extends AuthController
 
         $ociLib = new OciLib();
         $c = $ociLib->ociConnect(Yii::$app->params['DB_USER'], Yii::$app->params['DB_PASS'], Yii::$app->params['DB_NAME']);
-        try{
-            $response['data'] = $this->model->getCgtPre($post['custAccCode'],$post['planCode'],$post['unitType'],$post['typeValue'],$post['amount'],$post['unitPercent'],$post['unit'],$post['navDate'],$c);
-            if($response['data'] !== false)
-            {
-                $this->model->addLog("view_report",$post['groupCode']." view CGT pre report");
-                $response['code'] = "200";
-            }
-            $this->setResponse($response);
-        }
-        catch (Exception $e)
+
+        $response['data'] = $this->model->getCgtPre($post['custAccCode'],$post['planCode'],$post['unitType'],$post['typeValue'],$post['amount'],$post['unitPercent'],$post['unit'],$post['navDate'],$c);
+        if($response['data'] !== false)
         {
-            return  $e->getMessage();
+            $this->model->addLog("view_report",$post['groupCode']." view CGT pre report",$post['sessionSno']);
+            $response['code'] = "200";
         }
+        $this->setResponse($response);
     }
 
     public function actionCgtpost()
     {
         $post = Yii::$app->request->post();
         $response = array();
+
         if(empty($post['custAccCode']) || empty($post['transactionSno']) || empty($post['transactionType']) )
         {
             $response['code'] = "400";
@@ -88,19 +78,14 @@ class UserController extends AuthController
 
         $ociLib = new OciLib();
         $c = $ociLib->ociConnect(Yii::$app->params['DB_USER'], Yii::$app->params['DB_PASS'], Yii::$app->params['DB_NAME']);
-        try{
-            $response['data'] = $this->model->getCgtPost($post['custAccCode'],$post['transactionSno'],$post['transactionType'],$c);
-            if($response['data'] !== false)
-            {
-                $this->model->addLog("view_report",$post['groupCode']." view CGT post report");
-                $response['code'] = "200";
-            }
-            $this->setResponse($response);
-        }
-        catch (Exception $e)
+
+        $response['data'] = $this->model->getCgtPost($post['custAccCode'],$post['transactionSno'],$post['transactionType'],$c);
+        if($response['data'] !== false)
         {
-            return  $e->getMessage();
+            $this->model->addLog("view_report",$post['groupCode']." view CGT post report",$post['sessionSno']);
+            $response['code'] = "200";
         }
+        $this->setResponse($response);
     }
 
     public function actionCustomers_data()
@@ -117,22 +102,16 @@ class UserController extends AuthController
         $zakatExempted = (isset($post['zakatExempted']) ? $post['zakatExempted'] : "");
         $phone = (isset($post['phone']) ? $post['phone'] : "");
 
-        try{
-            $response = $this->model->getCustomersList($userCd,$accountCode,$accountName,$cnic,$email,$cgtExempted,$zakatExempted,$phone);
-            if($response)
-            {
-                $this->setResponse($response);
-                $this->model->addLog("view_report",$post['groupCode']." view Customer report");
-            }
-            else
-            {
-                $response['code'] = "403";
-                $this->setResponse($response);
-            }
-        }
-        catch (Exception $e)
+        $response = $this->model->getCustomersList($userCd,$accountCode,$accountName,$cnic,$email,$cgtExempted,$zakatExempted,$phone);
+        if($response)
         {
-            return  $e->getMessage();
+            $this->setResponse($response);
+            $this->model->addLog("view_report",$post['groupCode']." view Customer report",$post['sessionSno']);
+        }
+        else
+        {
+            $response['code'] = "403";
+            $this->setResponse($response);
         }
     }
 
@@ -146,18 +125,13 @@ class UserController extends AuthController
         }
 
         $gsno = $this->model->getUserGroupSno($post['userCd']);
-        try{
-            $response = $this->model->getEarnedValue($gsno['GROUP_SNO']);
-            if(!empty($response))
-            {
-                $this->model->addLog("view_report",$post['groupCode']." view load earned report");
-            }
-            $this->setResponse($response);
-        }
-        catch (Exception $e)
+
+        $response = $this->model->getEarnedValue($gsno['GROUP_SNO']);
+        if(!empty($response))
         {
-            return  $e->getMessage();
+            $this->model->addLog("view_report",$post['groupCode']." view load earned report",$post['sessionSno']);
         }
+        $this->setResponse($response);
     }
 
     public function createResponse($response)
@@ -183,18 +157,13 @@ class UserController extends AuthController
         //'00008903-1'
         $param = array("AccessKey"=>Yii::$app->params['REPORTS']['BALANCE_DETAIL_KEY'],'AccountNo'=>$post['accountNo'],'CustomerId'=>$post['customerId'],'Channel'=>Yii::$app->params['REPORTS']['BALANCE_DETAIL_CHANNEL'],'Type1'=>'','AvailableHolding'=>'','TransactionType'=>'');
         $res = $client->GetBalanceDetail($param);
-        try{
-            $res = $this->resultToJson($res->GetBalanceDetailResult);
-            if(!empty($res))
-            {
-                $this->model->addLog("view_report",$post['groupCode']." view balance detail report");
-            }
-            $this->setResponse($res);
-        }
-        catch (Exception $e)
+
+        $res = $this->resultToJson($res->GetBalanceDetailResult);
+        if(!empty($res))
         {
-            return  $e->getMessage();
+            $this->model->addLog("view_report",$post['groupCode']." view balance detail report",$post['sessionSno']);
         }
+        $this->setResponse($res);
     }
 
     ////////////////////////////////////////////
@@ -234,7 +203,6 @@ class UserController extends AuthController
         $post = Yii::$app->request->post();
         if(isset($post['fromDate']) && !empty($post['fromDate']) && isset($post['toDate']) && !empty($post['toDate']) && isset($post['RegNo']) && !empty($post['RegNo']) && isset($post['toPlanCode']) && !empty($post['toPlanCode']) && isset($post['fromPlanCode']) && !empty($post['fromPlanCode']) && isset($post['fromFundCode']) && !empty($post['fromFundCode']) && isset($post['toFundCode']) && !empty($post['toFundCode']) && isset($post['fromUnitType']) && !empty($post['fromUnitType']) && isset($post['toUnitType']) && !empty($post['toUnitType']) && isset($post['isProvision']) && !empty($post['isProvision']) && isset($post['reportType']) && !empty($post['reportType']))
         {
-
             $post = Yii::$app->request->post();
 
             $url = Yii::$app->params['REPORTS']['CUSTOMER_SERVICE_URL']."GetAccountStatement?AccessKey=".$post['accessKey']."&fromDate=".$post['fromDate']."&toDate=".$post['toDate']."&RegNo=".$post['RegNo']."&fromPlanCode=".$post['toPlanCode']."&toPlanCode=".$post['toPlanCode']."&fromFundCode=".$post['fromFundCode']."&toFundCode=".$post['toFundCode']."&fromUnitType=".$post['fromUnitType']."&toUnitType=".$post['toUnitType']."&isProvision=".$post['isProvision']."&reportType=".$post['reportType'];
@@ -246,12 +214,11 @@ class UserController extends AuthController
             curl_close($ch);
             $fileUrl = substr($fileUrl,76,ceil(strlen($fileUrl) - 9 ));
             $fileUrl = str_replace('</string>',"",$fileUrl);
-            //$this->debug($fileUrl);exit;
 
             if (substr($fileUrl, -3) == 'pdf')
             {
                 $file = file_get_contents($fileUrl);
-                $fileName = "pdfReport.pdf";//basename($fileUrl);
+                $fileName = "pdfReport.pdf";
 
                 $date = date("Ymdhis");
                 if(file_put_contents("../../".Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName, $file))
@@ -302,13 +269,18 @@ class UserController extends AuthController
             if($this->model->forgotPass($post['userEmail'],$mdun))
             {
                 $this->model->addLog("forgot_password",$post['userEmail']." requested for forgot password");
+                $body = 'Dear '.$post['userEmail'].'<br />It seems you may have forgotten your password!<p>Our system has recorded your attempt to login to UBL Funds Smart Partner Portal on '.date("l, F d, Y").' at '.date("H:i:s A");
+                $body.= 'In case this was not you, please let us know immediately. < p>If you have forgotten your password, click < a href="'.Yii::$app->params['VERIFY_CODE_URL'].'" >here< /a>< p> your OTP code is < p> '.$mdun.' < p> to reset it and have the new password sent to your registered email address, or contact us in case of other issues.';
+
+                //$this->sendEmail('UBL FM - Forgot password' ,$body,$post['userEmail'],'forgot password');
                 $response['code'] = "200";
+                $this->setResponse($response);
             }
-            $this->sendEmail('UBL FM - Forgot password' ,$mdun);
+
         }
         catch (Exception $e)
         {
-        return  $e->getMessage();
+            return  $e->getMessage();
         }
     }
 
@@ -350,116 +322,67 @@ class UserController extends AuthController
             $this->setResponse($response);
         }
 
-        try{
-            $response = $this->model->getSalesEntityGroup($post['groupCode']);
-            if(!empty($response))
-            {
-                $this->model->addLog("view_report",$post['groupCode']." view sales entity report");
-            }
-            $this->setResponse($response);
-        }
-        catch (Exception $e)
+
+        $response = $this->model->getSalesEntityGroup($post['groupCode']);
+        if(!empty($response))
         {
-            return  $e->getMessage();
+            $this->model->addLog("view_report",$post['groupCode']." view sales entity report",$post['sessionSno']);
         }
+        $this->setResponse($response);
     }
 
     public function actionSalesentitygroupdtl()
     {
-        try{
-            $response = $this->model->getSalesEntityGroupDtl();
-            $this->setResponse($response);
-        }
-        catch (Exception $e)
-        {
-            return  $e->getMessage();
-        }
+        $response = $this->model->getSalesEntityGroupDtl();
+        $this->setResponse($response);
     }
 
     public function actionCommissionstructure_mf()
     {
         $post = Yii::$app->request->post();
-        try{
-            $response = $this->model->getCommissionStructureMF($post['groupCode']);
-            if(!empty($response))
-            {
-                $this->model->addLog("view_report",$post['groupCode']." view commission structure management fees report");
-            }
-            $this->setResponse($response);
-        }
-        catch (Exception $e)
+        $response = $this->model->getCommissionStructureMF($post['groupCode']);
+        if(!empty($response))
         {
-            return  $e->getMessage();
+            $this->model->addLog("view_report",$post['groupCode']." view commission structure management fees report",$post['sessionSno']);
         }
+        $this->setResponse($response);
     }
 
     public function actionCommissionstructure_fl()
     {
         $post = Yii::$app->request->post();
-        try{
-            $response = $this->model->getCommissionStructureFL($post['groupCode']);
-            if(!empty($response))
-            {
-                $this->model->addLog("view_report",$post['groupCode']." view commission structure frontend load report");
-            }
-            $this->setResponse($response);
-        }
-        catch (Exception $e)
+        $response = $this->model->getCommissionStructureFL($post['groupCode']);
+        if(!empty($response))
         {
-            return  $e->getMessage();
+            $this->model->addLog("view_report",$post['groupCode']." view commission structure frontend load report",$post['sessionSno']);
         }
+        $this->setResponse($response);
     }
 
     public function actionCustomers_list()
     {
         $post = Yii::$app->request->post();
-        try{
-            $response = $this->model->getCustomersList($post['groupCode']);
-            $this->setResponse($response);
-        }
-        catch (Exception $e)
-        {
-            return  $e->getMessage();
-        }
+        $response = $this->model->getCustomersList($post['groupCode']);
+        $this->setResponse($response);
     }
 
     public function actionLogout()
     {
         $post = Yii::$app->request->post();
         $response = array();
-        if( empty($post['authToken']) )
+        $this->authToken = $this->fetchAccessToken();
+
+        if( empty($this->authToken) )
         {
             $response['code'] = "400";
             $this->setResponse($response);
         }
+        $this->model->logout($this->authToken);
+        $response['code'] = "200";
 
-
-        $result = $this->model->logout($post['authToken']);
-
-        foreach($result[0] as $res)
-        {
-            if($res == "TRUE")
-            {
-                $response['code'] = "200";
-                //$response['message'] = "Login successfully";
-            }
-            if($res == "FALSE")
-            {
-                $response['code'] = "401";
-                //$response['message'] = "Can not login, Try again";
-            }
-            if($res == "INACTIVE")
-            {
-                $response['code'] = "405";
-                //$response['message'] = "INACTIVE";
-            }
-            if($res == "LOCK")
-            {
-                $response['code'] = "405";
-//                $response['message'] = "LOCK";
-            }
-        }
-        $this->model->addLog("logged_out",$post['groupCode']." logged out");
+        $this->model->addLog("logged_out",$post['groupCode']." logged out",$post['sessionSno']);
+        $body = $this->logoutMailBody($post['userEmail']);
+        $this->sendEmail('logged out',$body,$post['userEmail'],'logout');
         $this->setResponse($response);
     }
 
@@ -468,6 +391,7 @@ class UserController extends AuthController
         $request = Yii::$app->request;
         $userEmail = $request->getBodyParam('userEmail');
         $dpCode = $request->getBodyParam('dpCode');
+        $sessionSno = $request->getBodyParam('sessionSno');
 
         if( empty($userEmail) || empty($dpCode) )
         {
@@ -477,7 +401,7 @@ class UserController extends AuthController
 
         $this->model->changeDistributor($userEmail,$dpCode);
 
-        $this->model->addLog("change_distributor",$userEmail." changed distributor to ".$dpCode);
+        $this->model->addLog("change_distributor",$userEmail." changed distributor to ".$dpCode,$sessionSno);
         $response['code'] = "200";
         $this->setResponse($response);
     }
@@ -626,6 +550,7 @@ class UserController extends AuthController
         $report = urldecode($report);
         return $report;
     }
+
     public function actionAllgroupmembers()
     {
         $post = Yii::$app->request->post();
@@ -674,7 +599,7 @@ class UserController extends AuthController
         }
 
         $data = $this->model->getGroupCustomerFundAum($post['groupSno'],$post['fundCode']);
-        $this->model->addLog("view_report",$post['groupCode']." view group customer fund aum report");
+        $this->model->addLog("view_report",$post['groupCode']." view group customer fund aum report",$post['sessionSno']);
         $response['code'] = '200';
         $response['data'] = $data;
         $this->setResponse($response);
@@ -698,7 +623,7 @@ class UserController extends AuthController
         }
         $data = $this->model->getTransactionTrack($post['accountCode'],$post['fromDate'],$post['toDate']);
         $response['code'] = '200';
-        $this->model->addLog("view_report",$post['groupCode']." view transaction track report");
+        $this->model->addLog("view_report",$post['groupCode']." view transaction track report",$post['sessionSno']);
         $response['data'] = $data;
         $this->setResponse($response);
     }
@@ -712,7 +637,7 @@ class UserController extends AuthController
             $this->setResponse($response);
         }
         $data = $this->model->getTransactionKeyword($post['keyword'],$post['keyword1'],$post['keyword2'],$post['keyword3']);
-        $this->model->addLog("view_report",$post['groupCode']." view transaction key word report");
+        $this->model->addLog("view_report",$post['groupCode']." view transaction key word report",$post['sessionSno']);
         $response['code'] = '200';
         $response['data'] = $data;
         $this->setResponse($response);
@@ -729,7 +654,7 @@ class UserController extends AuthController
 
         $data = $this->model->getInflowOutflow($post['groupSno']);
         $response['code'] = '200';
-        $this->model->addLog("view_report",$post['groupCode']." view inflow outflow report");
+        $this->model->addLog("view_report",$post['groupCode']." view inflow outflow report",$post['sessionSno']);
         $response['data'] = $data;
         $this->setResponse($response);
     }
@@ -763,6 +688,14 @@ class UserController extends AuthController
         $this->setResponse($response);
     }
 
+    public function actionAllnotifications()
+    {
+        $data = $this->model->getAllNotifications();
+        $response['code'] = '200';
+        $response['data'] = $data;
+        $this->setResponse($response);
+    }
+
     public function debug($array)
     {
         echo "<pre>";
@@ -778,11 +711,10 @@ class UserController extends AuthController
             $response['code'] = '400';
             $this->setResponse($response);
         }
-        $body = "<table border='0' width='50%'>
-                <tr><td>Message: </td><td>".$post['msg']."</td></tr>
-                </table>";
-
-        $this->sendEmail('Contact Us',$body);
+        $body = 'Dear <span class="partnerName">'.$post['userEmail'].'</span><br /><br />
+                Thank you for contacting us through UBL Funds Smart Partner Portal on <span class="logoutT">'.date("l, F d, Y").' </span>at <span class="logoutD">'.date('H:i:s A');
+        //$this->sendEmailToAdmin('Contact Us from '.$post['userEmail'],$post['msg']);
+        //$this->sendEmail('Contact Us',$body,$post['userEmail'],'Contact Us');
 
         $response['code'] = '200';
         $this->setResponse($response);
@@ -803,18 +735,8 @@ class UserController extends AuthController
         move_uploaded_file($_FILES['myFile']['tmp_name'], $location);
         $response['code'] = '200';
         $response['data'] = $viewPath;
-        $this->model->addLog("change_profile_picture",$post['groupCode']." changed profile picture");
+        $this->model->addLog("change_profile_picture",$post['groupCode']." changed profile picture",$post['sessionSno']);
         $this->setResponse($response);
-    }
-
-    protected function sendEmail($subject,$body)
-    {
-        \Yii::$app->mail->compose('your_view')
-            ->setFrom([\Yii::$app->params['supportEmail'] => 'Test Mail'])
-            ->setTo(Yii::$app->params['adminEmail'])
-            ->setSubject($subject)
-            ->setTextBody($body)
-            ->send();
     }
 
     public function actionGrouptransaction()
@@ -830,5 +752,4 @@ class UserController extends AuthController
         $response['data'] = $data;
         $this->setResponse($response);
     }
-
 }

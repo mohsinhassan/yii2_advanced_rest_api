@@ -77,6 +77,7 @@ return [
                         'POST inflowoutflow' => 'inflowoutflow',
                         'POST notifications' => 'notifications',
                         'PUT notificationread' => 'notificationread',
+                        'POST allnotifications' => 'allnotifications',
                         'POST contactus' => 'contactus',
                         'POST profilepicture' => 'profilepicture',
                         'POST grouptransaction' => 'grouptransaction',
