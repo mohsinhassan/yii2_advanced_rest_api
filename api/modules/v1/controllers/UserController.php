@@ -12,9 +12,13 @@ require_once('../../vendor/ocilib/OciLib.php');
  */
 class UserController extends AuthController
 {
+    public function init()
+    {
+        parent::init();
+    }
     public function actionLogin()
     {
-        return true;
+		return true;
     }
 
     public function actionChangepassword()
@@ -33,6 +37,13 @@ class UserController extends AuthController
         {
             $this->model->addLog("change_password",$post['userEmail']." changed password",$post['sessionSno']);
             $response['code'] = "200";
+
+            date_default_timezone_set('Asia/Karachi');
+            $body = "<br />Dear Partner,<br /><br />
+                    Your password has been changed successfully.<br /><br />
+                    To Login to your account <a href='".Yii::$app->params['LOGIN_URL']."'>click here</a>.";
+
+            $this->sendEmail('Change password' ,$body,$post['userEmail'],'Password changed successfully');
         }
 
         $this->setResponse($response);
@@ -40,6 +51,7 @@ class UserController extends AuthController
 
     public function actionCgtpre()
     {
+
         $post = Yii::$app->request->post();
         $response = array();
 
@@ -93,6 +105,13 @@ class UserController extends AuthController
         $post = Yii::$app->request->post();
 
         $userCd = $this->model->getUserCdByToken($this->authToken);
+     
+        if(!$this->model->checkGroupSno($userCd,$post['groupSno']))
+        {
+            $response['code'] = '401';
+            $this->setResponse($response);
+        }
+
         $accountCode = (isset($post['accountCode']) ? $post['accountCode'] : "");
         $accountName = (isset($post['accountName']) ? $post['accountName'] : "");
         $cnic = (isset($post['cnic']) ? $post['cnic'] : "");
@@ -102,7 +121,7 @@ class UserController extends AuthController
         $zakatExempted = (isset($post['zakatExempted']) ? $post['zakatExempted'] : "");
         $phone = (isset($post['phone']) ? $post['phone'] : "");
 
-        $response = $this->model->getCustomersList($userCd,$accountCode,$accountName,$cnic,$email,$cgtExempted,$zakatExempted,$phone);
+        $response = $this->model->getCustomersList($userCd,$post['groupSno'],$accountCode,$accountName,$cnic,$email,$cgtExempted,$zakatExempted,$phone);
         if($response)
         {
             $this->setResponse($response);
@@ -118,15 +137,20 @@ class UserController extends AuthController
     public function actionLoadearned()
     {
         $post = Yii::$app->request->post();
-        if(empty($post['userCd']) )
+        $userCd = $this->fetchUserCd();
+        if(empty($userCd) )
         {
             $response['code'] = "400";
             $this->setResponse($response);
         }
 
-        $gsno = $this->model->getUserGroupSno($post['userCd']);
+        if(!$this->model->checkGroupSno($userCd,$post['groupSno']))
+        {
+            $response['code'] = '401';
+            $this->setResponse($response);
+        }
 
-        $response = $this->model->getEarnedValue($gsno['GROUP_SNO']);
+        $response = $this->model->getEarnedValue($post['groupSno']);
         if(!empty($response))
         {
             $this->model->addLog("view_report",$post['groupCode']." view load earned report",$post['sessionSno']);
@@ -268,15 +292,17 @@ class UserController extends AuthController
         try{
             if($this->model->forgotPass($post['userEmail'],$mdun))
             {
+				date_default_timezone_set('Asia/Karachi');
+				
                 $this->model->addLog("forgot_password",$post['userEmail']." requested for forgot password");
-                $body = 'Dear '.$post['userEmail'].'<br />It seems you may have forgotten your password!<p>Our system has recorded your attempt to login to UBL Funds Smart Partner Portal on '.date("l, F d, Y").' at '.date("H:i:s A");
-                $body.= 'In case this was not you, please let us know immediately. < p>If you have forgotten your password, click < a href="'.Yii::$app->params['VERIFY_CODE_URL'].'" >here< /a>< p> your OTP code is < p> '.$mdun.' < p> to reset it and have the new password sent to your registered email address, or contact us in case of other issues.';
+                $body = "<br />Dear Partner,<br /><br />It seems you may have forgotten your password!<br /> Our system has recorded your attempt to login to UBL Funds Smart Partner Portal on ".date("l, F d, Y")." at ".date("h:i:s A").".";
+                $body.= " In case this was not you, please let us know immediately. <br /><br />If you have forgotten your password, click <a href='".Yii::$app->params['VERIFY_CODE_URL']."'>here</a><br />
+                <br /> to reset it, or contact us in case of other issues.<br /> Your verification code is : ".$mdun." <br />";
 
-                //$this->sendEmail('UBL FM - Forgot password' ,$body,$post['userEmail'],'forgot password');
+                $this->sendEmail('Forgot password ' ,$body,$post['userEmail'],'forgot password');
                 $response['code'] = "200";
                 $this->setResponse($response);
             }
-
         }
         catch (Exception $e)
         {
@@ -294,8 +320,15 @@ class UserController extends AuthController
         }
         if($this->model->validateEmail($post['userEmail']))
         {
-            if($this->model->codeVarify($post['userEmail'],$post['codeVerify'],$post['newPass']))
+            if($this->model->codeVerify($post['userEmail'],$post['codeVerify'],$post['newPass']))
             {
+				date_default_timezone_set('Asia/Karachi');
+                $body = "<br />Dear Partner,<br /><br />
+                    Your password has been changed successfully.<br /><br />
+                    To Login to your account <a href='".Yii::$app->params['LOGIN_URL']."'>click here</a>.";
+
+                $this->sendEmail('Change password' ,$body,$post['userEmail'],'Password changed successfully');
+
                 $response['code'] = "200";
                 $this->model->addLog("code_verify",$post['userEmail']." verified code successfully for forgot password");
             }
@@ -322,13 +355,36 @@ class UserController extends AuthController
             $this->setResponse($response);
         }
 
-
+        $this->checkGroupCode($post['groupCode']);
         $response = $this->model->getSalesEntityGroup($post['groupCode']);
         if(!empty($response))
         {
             $this->model->addLog("view_report",$post['groupCode']." view sales entity report",$post['sessionSno']);
         }
         $this->setResponse($response);
+    }
+
+    protected function checkGroupCode($userGroupCode)
+    {
+        $userCd = $this->fetchUserCd();
+        $chk = $this->model->getGroupCodeByUserCd($userCd);
+        if(trim($userGroupCode) != $chk[0]['GROUP_CODE'])
+        {
+            $response['code'] = "401";
+            $this->setResponse($response);
+        }
+        return true;
+    }
+
+    protected function checkUserCd($userUserCd)
+    {
+        $userCd = $this->fetchUserCd();
+        if(trim($userUserCd) != $userCd)
+        {
+            $response['code'] = "401";
+            $this->setResponse($response);
+        }
+        return true;
     }
 
     public function actionSalesentitygroupdtl()
@@ -340,6 +396,7 @@ class UserController extends AuthController
     public function actionCommissionstructure_mf()
     {
         $post = Yii::$app->request->post();
+        $this->checkGroupCode($post['groupCode']);
         $response = $this->model->getCommissionStructureMF($post['groupCode']);
         if(!empty($response))
         {
@@ -351,6 +408,15 @@ class UserController extends AuthController
     public function actionCommissionstructure_fl()
     {
         $post = Yii::$app->request->post();
+
+        if(empty($post['groupCode']))
+        {
+            $response['code'] = "401";
+            $this->setResponse($response);
+        }
+
+        $this->checkGroupCode($post['groupCode']);
+
         $response = $this->model->getCommissionStructureFL($post['groupCode']);
         if(!empty($response))
         {
@@ -362,6 +428,7 @@ class UserController extends AuthController
     public function actionCustomers_list()
     {
         $post = Yii::$app->request->post();
+        $this->checkGroupCode($post['groupCode']);
         $response = $this->model->getCustomersList($post['groupCode']);
         $this->setResponse($response);
     }
@@ -382,7 +449,7 @@ class UserController extends AuthController
 
         $this->model->addLog("logged_out",$post['groupCode']." logged out",$post['sessionSno']);
         $body = $this->logoutMailBody($post['userEmail']);
-        $this->sendEmail('logged out',$body,$post['userEmail'],'logout');
+        $this->sendEmail('Logout',$body,$post['userEmail'],'logout');
         $this->setResponse($response);
     }
 
@@ -424,12 +491,18 @@ class UserController extends AuthController
     public function actionAumrep()
     {
         $post = Yii::$app->request->post();
-        if( empty($post['fromDate']) )
+        if( empty($post['fromDate']) || empty($post['groupSno']) )
         {
             $response['code'] = "400";
             $this->setResponse($response);
         }
-        $result = $this->model->getAumrep($post['fromDate']);
+        $userCd = $this->fetchUserCd();
+        if(!$this->model->checkGroupSno($userCd,$post['groupSno']))
+        {
+            $response['code'] = '401';
+            $this->setResponse($response);
+        }
+        $result = $this->model->getAumrep($post['fromDate'],$post['groupSno']);
         $this->requestToSavePdf($result);
 
         if($result)
@@ -437,7 +510,8 @@ class UserController extends AuthController
             $response['code'] = "200";
             $this->savePdfToLocal($result);
         }
-        else {
+        else
+        {
             $response['code'] = "403";
         }
         $this->setResponse($response);
@@ -446,14 +520,19 @@ class UserController extends AuthController
     public function actionDalrep()
     {
         $post = Yii::$app->request->post();
-        if( empty($post['fromDate'])  && empty($post['toDate']) )
+        if( empty($post['fromDate'])  || empty($post['toDate']) )
         {
             $response['code'] = "400";
             $this->setResponse($response);
         }
+        $userCd = $this->fetchUserCd();
+        if(!$this->model->checkGroupSno($userCd,$post['groupSno']))
+        {
+            $response['code'] = '401';
+            $this->setResponse($response);
+        }
 
-        $result = $this->model->getDalrep($post['fromDate'],$post['toDate'],$post['p_ic']);
-
+        $result = $this->model->getDalrep($post['fromDate'],$post['toDate'],$post['groupSno']);
         $this->requestToSavePdf($result);
 
         if($result){
@@ -470,7 +549,7 @@ class UserController extends AuthController
     {
         $post = Yii::$app->request->post();
 
-        if( empty($post['fromDate'])  && empty($post['toDate']) && empty($post['custAccCode']) && empty($post['fundCode']) )
+        if( empty($post['fromDate'])  || empty($post['toDate']) || empty($post['custAccCode']) || empty($post['fundCode']) )
         {
             $response['code'] = "400";
             $this->setResponse($response);
@@ -488,6 +567,64 @@ class UserController extends AuthController
         $this->setResponse($response);
     }
 
+    public function actionMfeecommrep()
+    {
+        $post = Yii::$app->request->post();
+        if( empty($post['groupSno'])  || empty($post['fromDate']) || empty($post['toDate']) )
+        {
+            $response['code'] = "400";
+            $this->setResponse($response);
+        }
+        $userCd = $this->fetchUserCd();
+        if(!$this->model->checkGroupSno($userCd,$post['groupSno']))
+        {
+            $response['code'] = '401';
+            $this->setResponse($response);
+        }
+
+        $result = $this->model->getMfeecommrep($post['groupSno'],$post['fromDate'],$post['toDate']);
+        $this->requestToSavePdf($result);
+
+        if($result){
+            $response['code'] = "200";
+            $this->saveXlsToLocal($result);
+        }
+        else {
+            $response['code'] = "403";
+        }
+        $this->setResponse($response);
+    }
+
+    public function actionLoadcommrep()
+    {
+        $post = Yii::$app->request->post();
+        if( empty($post['groupSno'])  || empty($post['fromDate']) || empty($post['toDate']) )
+        {
+            $response['code'] = "400";
+            $this->setResponse($response);
+        }
+        $userCd = $this->fetchUserCd();
+        if(!$this->model->checkGroupSno($userCd,$post['groupSno']))
+        {
+            $response['code'] = '401';
+            $this->setResponse($response);
+        }
+
+        $result = $this->model->getLoadcommrep($post['groupSno'],$post['fromDate'],$post['toDate']);
+        $this->requestToSavePdf($result);
+
+        if($result){
+            $response['code'] = "200";
+            $this->saveXlsToLocal($result);
+        }
+        else {
+            $response['code'] = "403";
+        }
+        $this->setResponse($response);
+    }
+
+
+
     protected function savePdfToLocal($result)
     {
         $urlArray = explode("&",$result);
@@ -497,6 +634,7 @@ class UserController extends AuthController
             if($checkUri == "DESNAME")
             {
                 $report = str_replace("DESNAME=","",$uri);
+				break;
             }
         }
 
@@ -539,6 +677,62 @@ class UserController extends AuthController
             $this->setResponse($response);
         }
     }
+    protected function saveXlsToLocal($result)
+    {
+        $urlArray = explode("&",$result);
+        foreach($urlArray as $uri)
+        {
+            $checkUri = substr($uri,0,7);
+            if($checkUri == "DESNAME")
+            {
+                $report = str_replace("DESNAME=","",$uri);
+				break;
+            }
+        }
+        if (substr($report, -4) == 'html')
+        {
+            $pdfStr = Yii::$app->params['DISTRIBUTOR_REPORTS_SERVER'];
+            $reportArray = explode("%5C",urlencode($report));
+            $flag = 0;
+            foreach($reportArray as $ra)
+            {
+                if(substr($ra,0,7) == "OIS-SOA" || $flag==1)
+                {
+                    $flag = 1;
+                    $pdfStr.="/".$ra;
+                }
+            }
+            $report = $this->filterPdfStr($pdfStr);
+
+            $fileName = "excelReport.xls";
+            $date = date("Ymdhis");
+
+            $content = file_get_contents($report);
+			$uri = str_replace("DESNAME=","",$uri);
+			$uri = Yii::$app->params['REPORTS']['EXCEL_REPORT_PATH'].$uri;
+			
+			$content=file_get_contents($uri);
+			
+            $save_to = "../../".Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName;
+
+            if(file_put_contents($save_to, $content))
+            {
+                $response['code'] = '200';
+                $response['url'] =  Yii::$app->params['REPORTS']['REPORT_PATH'].Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName;
+                $this->setResponse($response);
+            }
+            else
+            {
+                $response['code'] = '000';
+                $this->setResponse($response);
+            }
+        }
+        else
+        {
+            $response['code'] = '-1';
+            $this->setResponse($response);
+        }
+    }
 
     protected function filterPdfStr($pdfStr)
     {
@@ -559,6 +753,7 @@ class UserController extends AuthController
             $response['code'] = '400';
             $this->setResponse($response);
         }
+        $this->checkUserCd($post['userCd']);
         $res = $this->model->getAllGroupMembers($post['userCd']);
         if($res)
         {
@@ -580,6 +775,12 @@ class UserController extends AuthController
             $response['code'] = '400';
             $this->setResponse($response);
         }
+        $userCd = $this->fetchUserCd();
+        if(!$this->model->checkGroupSno($userCd,$post['groupSno']))
+        {
+            $response['code'] = '401';
+            $this->setResponse($response);
+        }
 
         $data = $this->model->getGroupCustomers($post['groupSno']);
         $response['code'] = '200';
@@ -595,6 +796,12 @@ class UserController extends AuthController
         if( empty($post['groupSno']) || empty($post['fundCode']))
         {
             $response['code'] = '400';
+            $this->setResponse($response);
+        }
+        $userCd = $this->fetchUserCd();
+        if(!$this->model->checkGroupSno($userCd,$post['groupSno']))
+        {
+            $response['code'] = '401';
             $this->setResponse($response);
         }
 
@@ -621,7 +828,7 @@ class UserController extends AuthController
             $response['code'] = '400';
             $this->setResponse($response);
         }
-        $data = $this->model->getTransactionTrack($post['accountCode'],$post['fromDate'],$post['toDate']);
+        $data = $this->model->getTransactionTrack($post['accountCode'],$post['groupSno'],$post['fromDate'],$post['toDate']);
         $response['code'] = '200';
         $this->model->addLog("view_report",$post['groupCode']." view transaction track report",$post['sessionSno']);
         $response['data'] = $data;
@@ -651,6 +858,12 @@ class UserController extends AuthController
             $response['code'] = '400';
             $this->setResponse($response);
         }
+        $userCd = $this->fetchUserCd();
+        if(!$this->model->checkGroupSno($userCd,$post['groupSno']))
+        {
+            $response['code'] = '401';
+            $this->setResponse($response);
+        }
 
         $data = $this->model->getInflowOutflow($post['groupSno']);
         $response['code'] = '200';
@@ -667,6 +880,7 @@ class UserController extends AuthController
             $response['code'] = '400';
             $this->setResponse($response);
         }
+        $this->checkUserCd($post['userCd']);
         $data = $this->model->getUserNotifications($post['userCd']);
         $response['code'] = '200';
         $response['data'] = $data;
@@ -691,16 +905,21 @@ class UserController extends AuthController
     public function actionAllnotifications()
     {
         $data = $this->model->getAllNotifications();
+        for($i=0;$i<count($data);$i++)
+        {
+            if(empty($data[$i]['NOTIFICATION_DATE'])){
+                $response['code'] = '403';
+                $this->setResponse($response);
+            }
+
+            $customDate = explode("-",$data[$i]['NOTIFICATION_DATE']);
+            $month = $customDate[1];
+            $month = date('m', strtotime($month));
+            $data[$i]['NOTIFICATION_DATE'] = mktime ( 0, 0, 0, $month, $customDate[0], $customDate[2]);
+        }
         $response['code'] = '200';
         $response['data'] = $data;
         $this->setResponse($response);
-    }
-
-    public function debug($array)
-    {
-        echo "<pre>";
-        print_r($array);
-        echo "</pre>";
     }
 
     public function actionContactus()
@@ -711,10 +930,30 @@ class UserController extends AuthController
             $response['code'] = '400';
             $this->setResponse($response);
         }
-        $body = 'Dear <span class="partnerName">'.$post['userEmail'].'</span><br /><br />
-                Thank you for contacting us through UBL Funds Smart Partner Portal on <span class="logoutT">'.date("l, F d, Y").' </span>at <span class="logoutD">'.date('H:i:s A');
-        //$this->sendEmailToAdmin('Contact Us from '.$post['userEmail'],$post['msg']);
-        //$this->sendEmail('Contact Us',$body,$post['userEmail'],'Contact Us');
+		date_default_timezone_set('Asia/Karachi');
+
+        $body = '<br />Dear Partner,<br /><br />
+                Thank you for contacting us through UBL Funds Smart Partner Portal on <span>'.date("l, F d, Y").'
+                </span>at <span class="logoutD">'.date('h:i:s A').'.&nbsp;We have received your communication and will be reverting very soon.<br /><br />In case it was not you who contacted us, please let us know immediately.';
+
+        $userName = (isset($post['userName'])  ? $post['userName'] : "");
+        $partner = (isset($post['partner'])  ? $post['partner'] : "");
+        $address = (isset($post['address'])  ? $post['address'] : "");
+        $cellNumber = (isset($post['cellNumber'])  ? $post['cellNumber'] : "");
+        $contactPerson1 = (isset($post['contactPerson1'])  ? $post['contactPerson1'] : "");
+        $contactPerson2 = (isset($post['contactPerson2'])  ? $post['contactPerson2'] : "");
+        $dateTime = date("d-M-Y h:i:s A");
+        $entityType = (isset($post['entityType'])  ? $post['entityType'] : "");
+        $groupSno = (isset($post['groupSno'])  ? $post['groupSno'] : "");
+
+        $userDetail= array('userName' => $userName,'partner'=>$partner,'address' =>$address,
+            'userEmail' =>$post['userEmail'],'cellNumber'=>$cellNumber,
+            'contactPerson1'=>$contactPerson1,'contactPerson2'=>$contactPerson2,'dateTime' =>$dateTime,
+            'detail'=>$post['msg'],'groupSno'=>$groupSno,'entityType'=>$entityType);
+
+        $this->sendEmail('Contact Us',$body,$post['userEmail'],'Contact Us');
+        $this->sendEmailToAdmin('Contact Us from '.$post['userEmail'],$userDetail);
+
 
         $response['code'] = '200';
         $this->setResponse($response);
@@ -728,6 +967,7 @@ class UserController extends AuthController
             $response['code'] = '400';
             $this->setResponse($response);
         }
+        $this->checkUserCd($post['userCd']);
 
         $path = '../../'.Yii::$app->params['PROFILE_PIC_FOLDER'].'/';
         $viewPath = Yii::$app->params['PROFILE_PIC_FOLDER'].'/'. $post['userCd'].'_'.$_FILES['myFile']['name'];
@@ -747,9 +987,63 @@ class UserController extends AuthController
             $response['code'] = '400';
             $this->setResponse($response);
         }
+        $this->checkUserCd($post['userCd']);
+        $userCd = $this->fetchUserCd();
+        if(!$this->model->checkGroupSno($userCd,$post['groupSno']))
+        {
+            $response['code'] = '401';
+            $this->setResponse($response);
+        }
+
         $data = $this->model->getGroupTransactions($post['userCd'],$post['groupSno']);
         $response['code'] = '200';
         $response['data'] = $data;
         $this->setResponse($response);
+    }
+
+    public function actionCommissionsummary()
+    {
+        $post = Yii::$app->request->post();
+        if(  empty($post['groupSno']) || empty($post['fromDate']) || empty($post['toDate']) )
+        {
+            $response['code'] = '400';
+            $this->setResponse($response);
+        }
+        $userCd = $this->fetchUserCd();
+        if(!$this->model->checkGroupSno($userCd,$post['groupSno']))
+        {
+            $response['code'] = '401';
+            $this->setResponse($response);
+        }
+        $data = $this->model->getCommissionSummaryReport($post['groupSno'],$post['fromDate'],$post['toDate']);
+        $response['code'] = '200';
+        $response['data'] = $data;
+        $this->setResponse($response);
+    }
+
+    public function actionGetservertime()
+    {
+        $hour = date("H");$minute = date("i");$second = date("s");$month = date("m");$day = date("d");$year = date("Y");
+        $date = mktime ( $hour, $minute, $second, $month, $day, $year );
+
+        $response['serverDate'] = $date;
+        $response['code'] = '200';
+        $this->setResponse($response);
+    }
+
+    public function actionGetbusinessdate()
+    {
+        $data = $this->model->getBusinessDate();
+        $response['businessDate'] = $data[0]['KEY_VALUE'];
+        $response['code'] = '200';
+        $this->setResponse($response);
+    }
+
+    public function actionTest()
+    {
+        $body = $this->logoutMailBody('mohsin.hassan@tenpearls.com');
+        $this->sendEmail('Logout',$body,'mohsin.hassan@tenpearls.com','logout');
+        exit;
+        echo $uri = Yii::$app->params['REPORTS']['EXCEL_REPORT_PATH'];
     }
 }

@@ -14,12 +14,14 @@ require_once('../../vendor/encryptdecrypt/EncryptDecrypt.php');
 class AuthController extends ActiveController
 {
     protected $model;
-    public function init() {
+    public function init()
+    {
         parent::init();
         $this->model = new User();
+        date_default_timezone_set('Asia/Karachi');
     }
     protected $authToken;
-    public $modelClass = 'api\modules\v1\models\AuthUser';
+    public $modelClass = 'api\modules\v1\models\User';
 
     public function beforeAction($action){
         $post = Yii::$app->request->post();
@@ -49,9 +51,25 @@ class AuthController extends ActiveController
                 {
                     if($res == "TRUE")
                     {
-                        $rows = $this->model->getUserCdGroupCode($post['userEmail']);
+                        $rows = $this->model->getUserProfileData($post['userEmail']);
                         $userCd = $rows[0]['USER_CD'];
                         $groupCode = $rows[0]['GROUP_CODE'];
+
+                        if((empty($groupCode)) || (!$this->model->getCheckGroupMembers($userCd,$groupCode)))
+                        {
+                            $groupData = $this->model->getAllGroupMembers($userCd);
+                            if(empty($groupData[0]['GROUP_SNO']) || !isset($groupData[0]['GROUP_CODE']))
+                            {
+                                $response['code'] = "005";
+                                $this->setResponse($response);
+                                exit;
+                            }
+                            $this->model->changeDistributor($post['userEmail'],$groupData[0]['GROUP_CODE']);
+                            $rows = $this->model->getUserProfileData($post['userEmail']);
+                            $groupCode = $rows[0]['GROUP_CODE'];
+                        }
+
+                        $userName = $rows[0]['USER_NAME'];
                         $tokenCode = $this->createAccessToken($userCd);
                         if($this->model->saveAccessToken($tokenCode,$userCd))
                         {
@@ -62,14 +80,16 @@ class AuthController extends ActiveController
                             $response['code'] = "200";
                             $response['authToken'] = $tokenCode;
                             $response['groupCode'] = $groupCode;
+
                             $response['sessionSno'] = $sessionSno;
                             $response['userCd'] = $userCd;
+                            $response['userName'] = $userName;
                             $response['userPrivs'] = $userPrivs;
 
                             //////sending email code ///////////////
 
                             $body = $this->loginMailBody($post['userEmail']);
-                            //$this->sendEmail('Login',$body,"mastermind_mohsin@hotmail.com",'login');
+                            $this->sendEmail('Login',$body,$post['userEmail'],'login');
                         }
                     }
                     if($res == "FALSE")
@@ -113,7 +133,7 @@ class AuthController extends ActiveController
         }
     }
 
-    private function fetchUserCd()
+    protected function fetchUserCd()
     {
         $key = $this->model->getDecryptKey();
         $enc = new EncryptDecrypt();
@@ -152,7 +172,7 @@ class AuthController extends ActiveController
         }
     }
 
-    public function setResponse($response)
+    protected function setResponse($response)
     {
         if (isset($_SERVER['HTTP_ORIGIN'])) {
             header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
@@ -177,73 +197,139 @@ class AuthController extends ActiveController
     }
     protected function loginMailBody($email)
     {
-        $body = 'Dear <span >'.$email.'</span><br />
+		date_default_timezone_set('Asia/Karachi');
+        $body = '<br />Dear <span >Partner,</span><br /><br />
         Our system has recorded your <span class="logouttxt">login</span> to UBL Funds Smart Partner Portal
-        on <span>'.date("l, F d, Y").' </span>at <span >'.date("H:i:s A");
+        on <span>'.date("l, F d, Y").' </span>at <span >'.date("h:i:s A").".</span> In case this was not you, please let us know immediately.<br /><br />
+        We hope you enjoyed the experience of convenience!<br /><br />";
+
         return $body;
     }
 
     protected function logoutMailBody($email)
     {
-        $body = '
-        Dear <span >'.$email.'</span><br />
-Thank you for visiting UBL Funds Smart Partner Portal. Our systen recorded your <span class="logouttxt">logout</span>
-    on <span >'.date("l, F d, Y").' </span>at <span >'.date("H:i:s A");
+		date_default_timezone_set('Asia/Karachi');
+        $body = '<br />Dear <span >Partner,</span><br /><br />Thank you for visiting UBL Funds Smart Partner Portal. Our systen recorded your <span class="logouttxt">logout</span>
+    on <span >'.date("l, F d, Y").' </span>at <span >'.date("h:i:s A").".</span> In case this was not you, please let us know immediately.<br /><br />
+        We hope you enjoyed the experience of convenience!";
         return $body;
     }
     protected function getMailBodyHead($mailAction)
     {
-        $body = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-        <html xmlns="http://www.w3.org/1999/xhtml">
-        <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <title>'.$mailAction.'</title></head>';
+        $body = '<head>
+                    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+                    <title>Contacting</title>
+					
+					</head>
+                            <body>
+							<div class=" margin:0 auto; width:80%;">
+                                    <div style=" float:left; width: 100%;">
+                                    <span style="float: left; width: 100%; height: 435px;">
+									<img src="'.Yii::$app->params['EMAIL_IMAGE_PATH'].'header.png" width="100%" alt="header"> 
+									</span>
+                                    </div>
+
+                                    </div>
+									<div style="float:left; color: #6c6c6c; font-size: 24px; line-height: 30px; padding: 10px;">';
         return $body;
     }
 
-    protected function getMailBodyFoot()
+   protected function getMailBodyFoot()
     {
-        $body = '</span> In case you did not visit at that time, Please let us know immediately<br /><br />
-        We hope you enjoyed the experience of convenience!<br /><br />
+        $body = '<br /><br />
         Sincerely,'.'<br />
-        UBL Funds Smart Partner Portal Team
-        </p>
-        </p>
-        <div style="bottom: 0; width: 100%; float: left;">
-        <div style="float:left; width: 80%; margin-left: 10%; margin-top: 30px; margin-bottom: 10px;">
-        <span style="float:left; width: 33%; text-align: center; border-right: 1px solid #6c6c6c; color: #6c6c6c; font-size: 22px; font-weight: bold;">Call 0800 00026</span>
-        <span style="float:left; width: 33%; text-align: center; border-right: 1px solid #6c6c6c; color: #6c6c6c; font-size: 22px; font-weight: bold;">www.UBLFunds.com</span>
-        <span style="float:left; width: 33%; text-align: center; border-right: 1px solid #6c6c6c; color: #6c6c6c; font-size: 22px; font-weight: bold;">info@UBLFunds.com</span>
-        </div>
-        <span style="background:#004684; float:left;color: #fff; padding: 10px;">DISCLAIMER:
-        This is an aut-generated email. Please do not reply to it. If you find any discrepancy in the information available in you online account, please inform us immediately by writing to us at info@UBLFunds.com or by calling us at 0800-00026</span>
+        UBL Funds Smart Partner Portal Team<br /><br /><div style="float: left; width: 100%; height: 120px;"><img src="'.Yii::$app->params['EMAIL_IMAGE_PATH'].'footer.png" alt="footer" width="100%" />
         </div>
         </div>
-        </body>
-        </html>';
+        </body>';
         return $body;
     }
-
-    protected function sendEmail($subject,$bodyMid,$to,$mailAction='')
+	
+	protected function sendEmail($subject,$bodyMid,$to,$mailAction='')
     {
-        $body = $this->getMailBodyHead($mailAction);
-        $body .= $bodyMid;
-        echo $body .= $this->getMailBodyFoot();exit;
+		$body = $this->getMailBodyHead($mailAction);
+		$body .= $bodyMid;
+        $body .= $this->getMailBodyFoot();
 
-        $message = \Yii::$app->mail->compose('common_email_view', ['imageFileName1' => Yii::$app->params['REPORTS']['REPORT_PATH'].'api/web/images/logo1.png'], ['imageFileName2' => Yii::$app->params['REPORTS']['REPORT_PATH'].'api/web/images/logo2.png'], ['imageFileName3' => Yii::$app->params['REPORTS']['REPORT_PATH'].'api/web/images/logo3.png'], ['imageFileName4' => Yii::$app->params['REPORTS']['REPORT_PATH'].'api/web/images/logo4.png'])
-            ->setFrom([\Yii::$app->params['supportEmail'] => 'ubl fm team'])
+
+        $smtpHost = Yii::$app->params['SMTP_HOST_DEV'];
+        $smtpPort = Yii::$app->params['SMTP_PORT_DEV'];
+        $smtpFrom = Yii::$app->params['SMTP_FROM_DEV'];
+        $smtpDebug = Yii::$app->params['SMTP_DEBUG_DEV'];
+
+        if(YII_ENV == 'prod')
+        {
+            $smtpHost = Yii::$app->params['SMTP_HOST_PROD'];
+            $smtpPort = Yii::$app->params['SMTP_PORT_PROD'];
+            $smtpFrom = Yii::$app->params['SMTP_FROM_PROD'];
+            $smtpDebug = Yii::$app->params['SMTP_DEBUG_PROD'];
+        }
+
+        // Create the Transport
+        $transport = \Swift_SmtpTransport::newInstance($smtpHost, $smtpPort);
+
+        // Create the Mailer using your created Transport
+        $mailer = \Swift_Mailer::newInstance($transport);
+
+        // Create a message
+        $message = \Swift_Message::newInstance($subject)
+            ->setFrom([$smtpFrom => 'UBL Funds'])
             ->setTo($to)
-            ->setSubject($subject)
-            ->setHtmlBody($body);
-        $message->send();
+            ->setSubject($subject." @ UBL Funds Partner Portal")
+            ->addBcc("numrah.zafar@tenpearls.com")
+            //->addCc("mastermindmohin@gmail.com")
+            //->addCc("sahmar@ublfunds.com")
+            ->setBody($body, 'text/html');
+
+        if (!$mailer->send($message, $errors))
+        {
+            echo "Error:";
+            print_r($errors);
+        }
+        
     }
-    protected function sendEmailToAdmin($subject,$body)
+    protected function sendEmailToAdmin($subject,$userDetail)
     {
-         \Yii::$app->mail->compose('common_email_view')
-            ->setFrom([\Yii::$app->params['supportEmail'] => 'Test Mail'])
-            ->setTo(Yii::$app->params['adminEmail'])
+        $smtpHost = Yii::$app->params['SMTP_HOST_DEV'];
+        $smtpPort = Yii::$app->params['SMTP_PORT_DEV'];
+        $smtpFrom = Yii::$app->params['SMTP_FROM_DEV'];
+        $smtpDebug = Yii::$app->params['SMTP_DEBUG_DEV'];
+
+        if(YII_ENV == 'prod')
+        {
+            $smtpHost = Yii::$app->params['SMTP_HOST_PROD'];
+            $smtpPort = Yii::$app->params['SMTP_PORT_PROD'];
+            $smtpFrom = Yii::$app->params['SMTP_FROM_PROD'];
+            $smtpDebug = Yii::$app->params['SMTP_DEBUG_PROD'];
+        }
+
+        $transport = \Swift_SmtpTransport::newInstance($smtpHost, $smtpPort);
+
+        // Create the Mailer using your created Transport
+        $mailer = \Swift_Mailer::newInstance($transport);
+
+        $userDetail = "<table border='0'>".
+            "<tr ><td width='50%'>User name:</td><td width='50%'>".$userDetail['userName']."</td></tr><tr><td width='50%'>Partner :</td><td>".$userDetail['partner']."</td></tr>".
+            "<tr><td>Address:</td><td>". $userDetail['address']."</td></tr><tr><td>Email:</td><td>email@online.com</td></tr>".
+            "<tr><td>Cell number:</td><td>". $userDetail['cellNumber']."</td></tr><tr><td>Contact Person 1:</td><td>". $userDetail['contactPerson1']."</td></tr>".
+            "<tr><td>Contact Person2:</td><td>". $userDetail['contactPerson2']."</td></tr><tr><td>Group Sno:</td><td>". $userDetail['groupSno']."</td></tr>".
+            "<tr><td>Entity Type:</td><td>". $userDetail['entityType']."</td></tr><tr><td>Date Time:</td><td>". $userDetail['dateTime']."</td></tr>".
+            "<tr><td>Details:</td><td>". $userDetail['detail']."</td></tr></table>";
+
+        // Create a message
+        $message = \Swift_Message::newInstance($subject)
+            ->setFrom($smtpFrom)
+            ->setTo(array(Yii::$app->params['adminEmail']))
             ->setSubject($subject)
-            ->setHtmlBody($body)
-             ->send();
+            ->addCc("numrah.zafar@tenpearls.com")
+            //->addCc("mastermindmohin@gmail.com")
+            //->addCc("sahmar@ublfunds.com")
+            ->setBody($userDetail, 'text/html');
+
+        if (!$mailer->send($message, $errors))
+        {
+            echo "Error:";
+            print_r($errors);
+        }
     }
 }

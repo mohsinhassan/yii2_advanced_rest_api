@@ -130,14 +130,14 @@ class User extends ActiveRecord
     }
 
 
-    public function getUserCdGroupCode($email)
+    public function getUserProfileData($email)
     {
         try
         {
             $res = $this->validateEmail($email);
             if($res)
             {
-                $sql = "select USER_CD,GROUP_CODE from vw_user_profile where email_address = :email";
+                $sql = "select USER_CD,GROUP_CODE,USER_NAME from vw_user_profile where email_address = :email";
                 $command = $this->connection->createCommand($sql);
                 $command->bindValue('email',$email);
                 $rows = $command->queryAll();
@@ -276,22 +276,22 @@ class User extends ActiveRecord
         }
     }
 
-    public function codeVarify($userEmail,$codeVerify,$newPassword)
+    public function codeVerify($userEmail,$codeVerify,$newPassword)
     {
         try{
             $userCd = $this->getUserCd($userEmail);
             $selRows = $this->getVerifyCodeExpireMinutes();
+
             $sql = "select * from PA_DP_PASSWORD_REQUEST where user_cd = :userCd and short_code = :verifyCode and request_date > to_date('".date('Y-m-d ').date('H:i', strtotime('-'.$selRows[0]['KEY_VALUE'].' minutes')).date(':s')."','yyyy-mm-dd HH24:MI:SS') and request_expired = 0";
             $command = $this->connection->createCommand($sql);
             $command->bindValue("userCd",$userCd);
-            $command->bindValue("verifyCode",$codeVerify);
+            $command->bindValue("verifyCode",trim($codeVerify));
             $postCount = $command->queryScalar();
+
             if($postCount)
             {
-                $updSql = "update PA_DP_PASSWORD_REQUEST set request_expired =1 where  user_cd = :userCd and short_code = :verifyCode";
+                $updSql = "update PA_DP_PASSWORD_REQUEST set request_expired =1 where  user_cd = '".$userCd."' and short_code = '".trim($codeVerify)."'";
                 $updCommand = $this->connection->createCommand($updSql);
-                $command->bindValue("userCd",$userCd);
-                $command->bindValue("verifyCode",$codeVerify);
                 $updCommand->execute();
                 /////////////////////////Change password procedure code/////////////////////////
                 $status = '';
@@ -307,10 +307,8 @@ class User extends ActiveRecord
             }
             else
             {
-                $updSql = "update PA_DP_PASSWORD_REQUEST set request_expired = 1 where  user_cd = :userCd and short_code = :codeVerify";
+                $updSql = "update PA_DP_PASSWORD_REQUEST set request_expired = 1 where user_cd = '".$userCd."' and short_code = '".trim($codeVerify)."'";
                 $updCommand = $this->connection->createCommand($updSql);
-                $updCommand->bindValue("userCd",$userCd);
-                $updCommand->bindValue("codeVerify",$codeVerify);
                 $updCommand->execute();
                 return 0;
             }
@@ -366,7 +364,7 @@ class User extends ActiveRecord
     public function  getCommissionStructureMF($groupCode)
     {
         try{
-            $sql = "select * from vw_dp_commission where DISTRIBUTOR_CODE= :groupCode and DISTRIBUTOR_TYPE = 'D' and COMM_TYPE='F'";
+            $sql = "select * from vw_dp_commission where DISTRIBUTOR_CODE= :groupCode and DISTRIBUTOR_TYPE = 'D' and COMM_TYPE='F' order by fund_code,unit_type_code,from_slab";
             $command = $this->connection->createCommand($sql);
             $command->bindValue("groupCode",$groupCode);
             $data = $command->queryAll();
@@ -379,7 +377,7 @@ class User extends ActiveRecord
     public function  getCommissionStructureFL($groupCode)
     {
         try{
-            $sql = "select * from vw_dp_commission where DISTRIBUTOR_CODE= :groupCode and DISTRIBUTOR_TYPE = 'I' and COMM_TYPE='S'";
+            $sql = "select * from vw_dp_commission where DISTRIBUTOR_CODE= :groupCode and COMM_TYPE='S' order by fund_code,unit_type_code,from_slab";
             $command = $this->connection->createCommand($sql);
             $command->bindValue("groupCode",$groupCode);
             $data = $command->queryAll();
@@ -389,12 +387,14 @@ class User extends ActiveRecord
         }
     }
 
-    public function getCustomersList($userCd,$accountCode,$accountName,$cnic,$email,$cgtExempted,$zakatExempted,$phone)
+    public function getCustomersList($userCd,$groupSno,$accountCode,$accountName,$cnic,$email,$cgtExempted,$zakatExempted,$phone)
     {
         try{
-            $sql = "select ACCOUNT_CODE from vw_user_group_customer where user_cd = :userCd";
+
+            $sql = "select ACCOUNT_CODE from vw_user_group_customer where user_cd = :userCd and group_sno = :groupSno ";
             $command = $this->connection->createCommand($sql);
             $command->bindValue("userCd",$userCd);
+            $command->bindValue("groupSno",$groupSno);
             $rows = $command->queryAll();
 
             $acSeries = "";
@@ -428,7 +428,7 @@ class User extends ActiveRecord
             $sqlCust= "select * from vw_customers where 1 = 1 ";
             if($searchByAccountCode)
             {
-                $sqlCust .= " and ACCOUNT_CODE = '".$accountCode."' ";
+                $sqlCust .= " and ACCOUNT_CODE like '%".$accountCode."%' ";
             }
             else
             {
@@ -436,7 +436,7 @@ class User extends ActiveRecord
             }
             if(!empty($email))
             {
-                $sqlCust .= " and EMAIL = '".$email."'";
+                $sqlCust .= " and EMAIL like '%".$email."%'";
             }
             if(!empty($accountName))
             {
@@ -444,7 +444,7 @@ class User extends ActiveRecord
             }
             if(!empty($cnic))
             {
-                $sqlCust .= "and (CNIC = '".$cnic."' OR NTN = '".$cnic."')";
+                $sqlCust .= "and (CNIC like '%".$cnic."%' OR NTN like '%".$cnic."%')";
             }
             if(!empty($cgtExempted))
             {
@@ -456,7 +456,7 @@ class User extends ActiveRecord
             }
             if(!empty($phone))
             {
-                $sqlCust .= " and (RES_PHONE_NO = '".$phone."' OR OFF_PHONE_NO ='".$phone."' OR MOBILE_NO='".$phone."') ";
+                $sqlCust .= " and (RES_PHONE_NO like '%".$phone."%' OR OFF_PHONE_NO like '%".$phone."%' OR MOBILE_NO like '%".$phone."%') ";
             }
             $commandCust = $this->connection->createCommand($sqlCust);
             $data = $commandCust->queryAll();
@@ -605,6 +605,9 @@ class User extends ActiveRecord
             $eventCommand = $this->connection->createCommand($evntSql);
             $eventCommand->bindValue("event",$event);
             $eventRows = $eventCommand->queryAll();
+            if(!isset($eventRows[0]['EVENT_SNO'])){
+                return false;
+            }
             $eventSno = $eventRows[0]['EVENT_SNO'];
             $insSql = "insert into PA_DP_LOGS(log_sno,ACTION_DATE,EVENT_SNO,LOG_DESCRIP,SESSION_SNO) values (PA_DP_LOG_SEQ.Nextval,to_date('".date("y-m-d H:i:s")."','yyyy-mm-dd HH24:MI:SS'),:eventSno,:msg,:sessionSno)";
             $insCommand = $this->connection->createCommand($insSql);
@@ -612,6 +615,7 @@ class User extends ActiveRecord
             $insCommand->bindValue("msg",$msg);
             $insCommand->bindValue("sessionSno",$sessionSno);
             $insCommand->execute();
+
 
         } catch (Exception $e) {
             return  $e->getMessage();
@@ -629,8 +633,14 @@ class User extends ActiveRecord
             {
                 $userPrivs[] = $resPriv['OPT_CD'];
             }
-            $userPrivs = array_unique($userPrivs);
-            return $userPrivs;
+            if(is_array($userPrivs))
+            {
+                $userPrivs = array_unique($userPrivs);
+                return $userPrivs;
+            }
+            else {
+                return false;
+            }
         } catch (Exception $e) {
             return  $e->getMessage();
         }
@@ -646,8 +656,13 @@ class User extends ActiveRecord
 
             $selRows = $this->getBusinessDate();
 
-            $fromDate = $selRows[0]['KEY_VALUE'];
-            $toDate = date("t-M-y");
+            $businessDate = $selRows[0]['KEY_VALUE'];
+            list($day, $month, $year) = explode("-",$businessDate);
+            $pre_mth = Date("M", strtotime($month . " last month"));
+            $fromDate = "01-".$pre_mth.'-'.$year;
+
+            $toDate = Date("t-M-Y", strtotime($month. " last month"));
+            $ytdFromDate = $toDate;//"01-Jan-".$year;
 
             $command = $this->connection->createCommand("CALL PROC_DP_EARNED_VALUE (:P_GROUP_SNO, :P_FROM_DATE, :P_TO_DATE, :P_O_LOAD_COMM,:P_O_MF_COMM,:P_O_YTD_COMM)");
             $command->bindParam(':P_GROUP_SNO', $groupSno, PDO::PARAM_STR);
@@ -662,6 +677,7 @@ class User extends ActiveRecord
             $response['mfComm'] = $mfComm;
             $response['ytdComm'] = $ytdComm;
             $response['fromDate'] = $fromDate;
+            $response['ytdFromDate'] = $ytdFromDate;
             return $response;
         } catch (Exception $e) {
             return  $e->getMessage();
@@ -689,12 +705,14 @@ class User extends ActiveRecord
 
     }
 
-    public function getAumrep($fromDate)
+    public function getAumrep($fromDate,$groupSno)
     {
         try{
             $result = "";
-            $command = $this->connection->createCommand("call PKG_DP_REP.proc_get_aum_rep(:P_AS_ON_DATE, :RESULT)");
+            $command = $this->connection->createCommand("call PKG_DP_REP.proc_get_aum_rep(:P_AS_ON_DATE, :P_Group_Sno, :RESULT)");
+
             $command->bindParam(':P_AS_ON_DATE', $fromDate, PDO::PARAM_STR);
+            $command->bindParam(':P_Group_Sno', $groupSno, PDO::PARAM_STR);
             $command->bindParam(':RESULT', $result, PDO::PARAM_STR, 1000);
             $command->execute();
         return $result;
@@ -704,14 +722,14 @@ class User extends ActiveRecord
         }
     }
 
-    public function getDalrep($fromDate,$toDate,$p_ic)
+    public function getDalrep($fromDate,$toDate,$groupSno)
     {
         try{
             $result = "";
-            $command = $this->connection->createCommand("call PKG_DP_REP.PROC_GET_DAL_REP (:P_FROM_DATE, :P_TO_DATE, :P_IC, :P_RESULT)");
+            $command = $this->connection->createCommand("call PKG_DP_REP.PROC_GET_DAL_REP (:P_FROM_DATE, :P_TO_DATE , :P_GROUP_SNO, :P_RESULT)");
             $command->bindParam(':P_FROM_DATE', $fromDate, PDO::PARAM_STR);
             $command->bindParam(':P_TO_DATE', $toDate, PDO::PARAM_STR);
-            $command->bindParam(':P_IC', $p_ic, PDO::PARAM_STR);
+            $command->bindParam(':P_GROUP_SNO', $groupSno, PDO::PARAM_STR);
             $command->bindParam(':P_RESULT', $result, PDO::PARAM_STR, 1000);
             $command->execute();
         return $result;
@@ -725,7 +743,7 @@ class User extends ActiveRecord
     {
         try{
             $result = "";
-            $command = $this->connection->createCommand("call PKG_DP_REP.PROC_GET_CPRN_REP(:P_FROM_DATE, :P_TO_DATE, :P_CUST_ACCT_CODE, :P_FUND_CODE :P_RESULT)");
+            $command = $this->connection->createCommand("call PKG_DP_REP.PROC_GET_CPRN_REP(:P_FROM_DATE, :P_TO_DATE, :P_CUST_ACCT_CODE, :P_FUND_CODE, :P_RESULT)");
             $command->bindParam(':P_FROM_DATE', $fromDate, PDO::PARAM_STR);
             $command->bindParam(':P_TO_DATE', $toDate, PDO::PARAM_STR);
             $command->bindParam(':P_CUST_ACCT_CODE', $customerCode, PDO::PARAM_STR);
@@ -739,10 +757,44 @@ class User extends ActiveRecord
         }
     }
 
+    public function getMfeecommrep($groupSno,$fromDate,$toDate)
+    {
+        try{
+            $result = "";
+            $command = $this->connection->createCommand("call PKG_DP_REP.proc_get_MFEE_com(:P_GROUP_SNO, :P_FROM_DATE, :P_TO_DATE, :P_RESULT)");
+            $command->bindParam(':P_GROUP_SNO', $groupSno, PDO::PARAM_INT);
+            $command->bindParam(':P_FROM_DATE', $fromDate, PDO::PARAM_STR);
+            $command->bindParam(':P_TO_DATE', $toDate, PDO::PARAM_STR);
+            $command->bindParam(':P_RESULT', $result, PDO::PARAM_STR, 1000);
+            $command->execute();
+            return $result;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
+    }
+
+    public function getLoadcommrep($groupSno,$fromDate,$toDate)
+    {
+        try{
+            $result = "";
+            $command = $this->connection->createCommand("call PKG_DP_REP.proc_get_load_com(:P_GROUP_SNO, :P_FROM_DATE, :P_TO_DATE, :P_RESULT)");
+            $command->bindParam(':P_GROUP_SNO', $groupSno, PDO::PARAM_INT);
+            $command->bindParam(':P_FROM_DATE', $fromDate, PDO::PARAM_STR);
+            $command->bindParam(':P_TO_DATE', $toDate, PDO::PARAM_STR);
+            $command->bindParam(':P_RESULT', $result, PDO::PARAM_STR, 1000);
+            $command->execute();
+            return $result;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
+    }
+
     public function getAllGroupMembers($userCd)
     {
         try{
-            $sql = "select * from PA_SALE_ENTITY_GROUP where group_sno in (select group_sno from VW_USER_GROUP where user_cd = :userCd)";
+            $sql = "select * from PA_SALE_ENTITY_GROUP where group_sno in (select group_sno from VW_USER_GROUP where user_cd = :userCd and active = 'Y')";
             $command = $this->connection->createCommand($sql);
             $command->bindValue("userCd",$userCd);
             $rows = $command->queryAll();
@@ -751,7 +803,27 @@ class User extends ActiveRecord
         catch (Exception $e) {
             return  $e->getMessage();
         }
+    }
 
+    public function getCheckGroupMembers($userCd,$groupCode)
+    {
+        try{
+            $sql = "select * from PA_SALE_ENTITY_GROUP eg inner join VW_USER_GROUP ug on eg.group_sno = ug.GROUP_SNO where eg.group_code = :groupCode and ug.USER_CD = :userCd";
+            $command = $this->connection->createCommand($sql);
+            $command->bindValue("userCd",$userCd); $command->bindValue("groupCode",$groupCode);
+            $postCount = $command->queryScalar();
+            if($postCount)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
     }
 
     public function getGroupCustomers($groupSno)
@@ -798,12 +870,13 @@ class User extends ActiveRecord
 
     }
 
-    public function getTransactionTrack($accountCode,$transDate,$toDate)
+    public function getTransactionTrack($accountCode,$groupSno,$transDate,$toDate)
     {
         try{
-            $sql = "select * from vw_dp_trans_track where account_code ='$accountCode' and transaction_date > to_date('".$transDate."','dd-mon-yyyy') and transaction_date < to_date('".$toDate."','dd-mon-yyyy')";
+            $sql = "select * from vw_dp_trans_track where account_code =:accountCode and group_sno = :groupSno  and transaction_date >= to_date(:transDate,'dd-mon-yyyy') and transaction_date <= to_date(:toDate,'dd-mon-yyyy')";
             $command = $this->connection->createCommand($sql);
             $command->bindValue("accountCode",$accountCode);
+            $command->bindValue("groupSno",$groupSno);
             $command->bindValue("transDate",$transDate);
             $command->bindValue("toDate",$toDate);
             $rows = $command->queryAll();
@@ -849,7 +922,7 @@ class User extends ActiveRecord
     public function getUserNotifications($userCd)
     {
         try{
-            $sql = "select * from pa_dp_notification where notification_id not in (select notification_id from pa_dp_notification_user where user_id = :userCd ) order by notification_id";
+            $sql = "select notification_id,notification_details,notification_status,to_date(notification_date,'dd-mm-yy') as notification_date from pa_dp_notification where notification_id not in (select notification_id from pa_dp_notification_user where user_id = :userCd )  and notification_status = 'A' order by notification_date,notification_id";
             $command = $this->connection->createCommand($sql);
             $command->bindValue("userCd",$userCd);
             $rows = $command->queryAll();
@@ -877,7 +950,7 @@ class User extends ActiveRecord
     public function getAllNotifications()
     {
         try{
-            $sql = "select * from pa_dp_notification order by notification_date";
+            $sql = "select * from pa_dp_notification order by notification_date desc";
             $command = $this->connection->createCommand($sql);
             $rows = $command->queryAll();
             return $rows;
@@ -896,6 +969,55 @@ class User extends ActiveRecord
             $selCommand->bindValue('group_sno',$groupSno);
             $rows = $selCommand->queryAll();
             return $rows;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
+    }
+
+    public function getCommissionSummaryReport($groupSno,$fromDate,$toDate)
+    {
+        $result = "";
+        $command = $this->connection->createCommand("CALL proc_get_dis_com_rep(:P_GROUP_SNO,:P_FROM_DATE, :P_TO_DATE, :P_RESULT)");
+        $command->bindParam(':P_GROUP_SNO', $groupSno, PDO::PARAM_STR);
+        $command->bindParam(':P_FROM_DATE', $fromDate, PDO::PARAM_STR);
+        $command->bindParam(':P_TO_DATE', $toDate, PDO::PARAM_STR);
+        $command->bindParam(':P_RESULT', $result, PDO::PARAM_STR, 20);
+        $command->execute();
+        return $result;
+    }
+
+    public function getGroupCodeByUserCd($userCd)
+    {
+        try{
+            $sql = "select * from vw_user_profile where user_cd =:user_cd";
+            $selCommand = $this->connection->createCommand($sql);
+            $selCommand->bindValue('user_cd',$userCd);
+            $rows = $selCommand->queryAll();
+            return $rows;
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
+    }
+
+    public function checkGroupSno($userCd,$groupSno)
+    {
+        try{
+            $sql = "select * from vw_user_group_customer where user_cd =:userCd and group_sno = :groupSno";
+            $selCommand = $this->connection->createCommand($sql);
+            $selCommand->bindValue('userCd',$userCd);
+            $selCommand->bindValue('groupSno',$groupSno);
+
+            $postCount = $selCommand->queryScalar();
+            if($postCount)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
         catch (Exception $e) {
             return  $e->getMessage();
