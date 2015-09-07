@@ -54,6 +54,7 @@ class User extends ActiveRecord
             oci_bind_by_name($s,':return_cursor',$rc,-1,OCI_B_CURSOR);
 
             oci_execute($s);
+            
             oci_execute($rc);
             $row = oci_fetch_assoc($rc);
             return $row;
