@@ -60,6 +60,7 @@ class AuthController extends ActiveController
                             $groupData = $this->model->getAllGroupMembers($userCd);
                             if(empty($groupData[0]['GROUP_SNO']) || !isset($groupData[0]['GROUP_CODE']))
                             {
+                                // Distributor not available under logged in user or invalid distributor.
                                 $response['code'] = "005";
                                 $this->setResponse($response);
                                 exit;
@@ -88,7 +89,7 @@ class AuthController extends ActiveController
 
                             //////sending email code ///////////////
 
-                            $body = $this->loginMailBody($post['userEmail']);
+                            $body = $this->loginMailBody();
                             $this->sendEmail('Login',$body,$post['userEmail'],'login');
                         }
                     }
@@ -125,6 +126,7 @@ class AuthController extends ActiveController
             }
             else
             {
+                //invalid access token or session sno
                 $response['code'] = "006";
                 $this->setResponse($response);
                 exit;
@@ -195,7 +197,7 @@ class AuthController extends ActiveController
         echo $jsonResponse;
         exit;
     }
-    protected function loginMailBody($email)
+    protected function loginMailBody()
     {
 		date_default_timezone_set('Asia/Karachi');
         $body = '<br />Dear <span >Partner,</span><br /><br />
@@ -206,15 +208,15 @@ class AuthController extends ActiveController
         return $body;
     }
 
-    protected function logoutMailBody($email)
+    protected function logoutMailBody()
     {
 		date_default_timezone_set('Asia/Karachi');
-        $body = '<br />Dear <span >Partner,</span><br /><br />Thank you for visiting UBL Funds Smart Partner Portal. Our systen recorded your <span class="logouttxt">logout</span>
+        $body = '<br />Dear <span >Partner,</span><br /><br />Thank you for visiting UBL Funds Smart Partner Portal. Our system recorded your <span class="logouttxt">logout</span>
     on <span >'.date("l, F d, Y").' </span>at <span >'.date("h:i:s A").".</span> In case this was not you, please let us know immediately.<br /><br />
         We hope you enjoyed the experience of convenience!";
         return $body;
     }
-    protected function getMailBodyHead($mailAction)
+    protected function getMailBodyHead()
     {
         $body = '<head>
                     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -225,7 +227,7 @@ class AuthController extends ActiveController
 							<div class=" margin:0 auto; width:80%;">
                                     <div style=" float:left; width: 100%;">
                                     <span style="float: left; width: 100%; height: 435px;">
-									<img src="'.Yii::$app->params['EMAIL_IMAGE_PATH'].'header.png" width="100%" alt="header"> 
+									<img alt="Welcome" src="'.Yii::$app->params['EMAIL_IMAGE_PATH'].'header.png" width="100%" >
 									</span>
                                     </div>
 
@@ -247,7 +249,7 @@ class AuthController extends ActiveController
 	
 	protected function sendEmail($subject,$bodyMid,$to,$mailAction='')
     {
-		$body = $this->getMailBodyHead($mailAction);
+		$body = $this->getMailBodyHead();
 		$body .= $bodyMid;
         $body .= $this->getMailBodyFoot();
 
@@ -276,9 +278,9 @@ class AuthController extends ActiveController
             ->setFrom([$smtpFrom => 'UBL Funds'])
             ->setTo($to)
             ->setSubject($subject." @ UBL Funds Partner Portal")
-            ->addBcc("numrah.zafar@tenpearls.com")
-            //->addCc("mastermindmohin@gmail.com")
             //->addCc("sahmar@ublfunds.com")
+            ->addCc("mohsin.hassan@tenpearls.com")
+            //->addCc("numrah.zafar@tenpearls.com")
             ->setBody($body, 'text/html');
 
         if (!$mailer->send($message, $errors))
@@ -288,7 +290,7 @@ class AuthController extends ActiveController
         }
         
     }
-    protected function sendEmailToAdmin($subject,$userDetail)
+    protected function sendEmailToAdmin($subject,$userDetail,$replyTo='')
     {
         $smtpHost = Yii::$app->params['SMTP_HOST_DEV'];
         $smtpPort = Yii::$app->params['SMTP_PORT_DEV'];
@@ -310,20 +312,26 @@ class AuthController extends ActiveController
 
         $userDetail = "<table border='0'>".
             "<tr ><td width='50%'>User name:</td><td width='50%'>".$userDetail['userName']."</td></tr><tr><td width='50%'>Partner :</td><td>".$userDetail['partner']."</td></tr>".
-            "<tr><td>Address:</td><td>". $userDetail['address']."</td></tr><tr><td>Email:</td><td>email@online.com</td></tr>".
+            "<tr><td>Address:</td><td>". $userDetail['address']."</td></tr><tr><td>Email:</td><td>". $userDetail['userEmail']."</td></tr>".
             "<tr><td>Cell number:</td><td>". $userDetail['cellNumber']."</td></tr><tr><td>Contact Person 1:</td><td>". $userDetail['contactPerson1']."</td></tr>".
             "<tr><td>Contact Person2:</td><td>". $userDetail['contactPerson2']."</td></tr><tr><td>Group Sno:</td><td>". $userDetail['groupSno']."</td></tr>".
             "<tr><td>Entity Type:</td><td>". $userDetail['entityType']."</td></tr><tr><td>Date Time:</td><td>". $userDetail['dateTime']."</td></tr>".
             "<tr><td>Details:</td><td>". $userDetail['detail']."</td></tr></table>";
 
+        if(empty($replyTo))
+        {
+            $replyTo = Yii::$app->params['adminEmail'];
+        }
+
         // Create a message
         $message = \Swift_Message::newInstance($subject)
             ->setFrom($smtpFrom)
-            ->setTo(array(Yii::$app->params['adminEmail']))
             ->setSubject($subject)
-            ->addCc("numrah.zafar@tenpearls.com")
-            //->addCc("mastermindmohin@gmail.com")
+            ->setTo(array($replyTo))
+            ->addCc(Yii::$app->params['adminEmail'])
             //->addCc("sahmar@ublfunds.com")
+            //->addCc("ahmar.jafri@gmail.com")
+            //->addCc("mohsin.hassan@tenpearls.com")
             ->setBody($userDetail, 'text/html');
 
         if (!$mailer->send($message, $errors))

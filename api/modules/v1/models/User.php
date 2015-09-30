@@ -54,7 +54,7 @@ class User extends ActiveRecord
             oci_bind_by_name($s,':return_cursor',$rc,-1,OCI_B_CURSOR);
 
             oci_execute($s);
-            
+
             oci_execute($rc);
             $row = oci_fetch_assoc($rc);
             return $row;
@@ -92,7 +92,14 @@ class User extends ActiveRecord
                 $command = $this->connection->createCommand($sql);
                 $command->bindValue("email",$email);
                 $rows = $command->queryAll();
-                return $rows[0]['USER_CD'];
+                $resp= 0;
+                if(isset($rows[0]['USER_CD']))
+                {
+                    $resp=  $rows[0]['USER_CD'];
+                }
+                return $resp;
+
+
             }
             else{
                 return false;
@@ -110,7 +117,12 @@ class User extends ActiveRecord
             $command = $this->connection->createCommand($sql);
             $command->bindValue('token',$authToken);
             $rows = $command->queryAll();
-            return $rows[0]['USER_CD'];
+            $resp= 0;
+            if(isset($rows[0]['USER_CD']))
+            {
+                $resp=  $rows[0]['USER_CD'];
+            }
+            return $resp;
         } catch (Exception $e) {
             return  $e->getMessage();
         }
@@ -254,6 +266,7 @@ class User extends ActiveRecord
 
     public function forgotPass($userEmail,$mdun)
     {
+
         try
         {
             $userCd = $this->getUserCd($userEmail);
@@ -923,7 +936,7 @@ class User extends ActiveRecord
     public function getUserNotifications($userCd)
     {
         try{
-            $sql = "select notification_id,notification_details,notification_status,to_date(notification_date,'dd-mm-yy') as notification_date from pa_dp_notification where notification_id not in (select notification_id from pa_dp_notification_user where user_id = :userCd )  and notification_status = 'A' order by notification_date,notification_id";
+            $sql = "select notification_id,notification_details,notification_status,to_date(notification_date,'dd-mm-yy') as notification_date,notification_head from pa_dp_notification where notification_id not in (select notification_id from pa_dp_notification_user where user_id = :userCd )  and notification_status = 'A' order by notification_date,notification_id";
             $command = $this->connection->createCommand($sql);
             $command->bindValue("userCd",$userCd);
             $rows = $command->queryAll();
@@ -961,13 +974,16 @@ class User extends ActiveRecord
         }
     }
 
-    public function getGroupTransactions($userCd,$groupSno)
+    public function getGroupTransactions($userCd,$groupSno,$fromDate,$toDate,$accountCode)
     {
         try{
-            $sql = "select * from vw_user_group_transaction where user_cd = :user_cd and group_sno = :group_sno";
+            $sql = "select * from vw_user_group_transaction where user_cd = :user_cd and group_sno = :group_sno and account_code = :account_code  and ledger_date >= to_date(:from_date,'dd-mon-yyyy') and ledger_date <= to_date(:to_date,'dd-mon-yyyy')";
             $selCommand = $this->connection->createCommand($sql);
             $selCommand->bindValue('user_cd',$userCd);
             $selCommand->bindValue('group_sno',$groupSno);
+            $selCommand->bindValue('from_date',$fromDate);
+            $selCommand->bindValue('to_date',$toDate);
+            $selCommand->bindValue('account_code',$accountCode);
             $rows = $selCommand->queryAll();
             return $rows;
         }
@@ -1019,6 +1035,20 @@ class User extends ActiveRecord
             {
                 return false;
             }
+        }
+        catch (Exception $e) {
+            return  $e->getMessage();
+        }
+    }
+
+    public function getRepEmail($groupSno)
+    {
+        try{
+            $sql = "select rep_email from dp_view.pa_sale_entity_group where group_sno = :group_sno";
+            $selCommand = $this->connection->createCommand($sql);
+            $selCommand->bindValue('group_sno',$groupSno);
+            $rows = $selCommand->queryAll();
+            return $rows;
         }
         catch (Exception $e) {
             return  $e->getMessage();

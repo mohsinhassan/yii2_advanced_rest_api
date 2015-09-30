@@ -271,6 +271,7 @@ class UserController extends AuthController
 
     public function actionForgotpass()
     {
+
         $post = Yii::$app->request->post();
         if( empty($post['userEmail']) )
         {
@@ -285,9 +286,9 @@ class UserController extends AuthController
         $ran= rand(0,10000000);
         $dmtran= $dmt+$ran;
         $un=  uniqid();
-        $dmtun = $dmt.$un;
+        //$dmtun = $dmt.$un;
         $mdun = md5($dmtran.$un);
-        $sort=substr($mdun, 16); // if you want sort length code.
+        //$sort=substr($mdun, 16); // if you want sort length code.
         $mdun = substr($mdun,0,19);
         try{
             if($this->model->forgotPass($post['userEmail'],$mdun))
@@ -296,8 +297,7 @@ class UserController extends AuthController
 				
                 $this->model->addLog("forgot_password",$post['userEmail']." requested for forgot password");
                 $body = "<br />Dear Partner,<br /><br />It seems you may have forgotten your password!<br /> Our system has recorded your attempt to login to UBL Funds Smart Partner Portal on ".date("l, F d, Y")." at ".date("h:i:s A").".";
-                $body.= " In case this was not you, please let us know immediately. <br /><br />If you have forgotten your password, click <a href='".Yii::$app->params['VERIFY_CODE_URL']."'>here</a><br />
-                <br /> to reset it, or contact us in case of other issues.<br /> Your verification code is : ".$mdun." <br />";
+                $body.= " In case this was not you, please let us know immediately. <br /><br />If you have forgotten your password, click <a href='".Yii::$app->params['VERIFY_CODE_URL']."'>here</a> to reset it, or contact us in case of other issues.<br /><br />Your verification code is : ".$mdun." <br />";
 
                 $this->sendEmail('Forgot password ' ,$body,$post['userEmail'],'forgot password');
                 $response['code'] = "200";
@@ -448,7 +448,7 @@ class UserController extends AuthController
         $response['code'] = "200";
 
         $this->model->addLog("logged_out",$post['groupCode']." logged out",$post['sessionSno']);
-        $body = $this->logoutMailBody($post['userEmail']);
+        $body = $this->logoutMailBody();
         $this->sendEmail('Logout',$body,$post['userEmail'],'logout');
         $this->setResponse($response);
     }
@@ -925,7 +925,7 @@ class UserController extends AuthController
     public function actionContactus()
     {
         $post = Yii::$app->request->post();
-        if( empty($post['msg']) || empty($post['userEmail']) )
+        if( empty($post['msg']) || empty($post['groupSno']) )
         {
             $response['code'] = '400';
             $this->setResponse($response);
@@ -951,9 +951,11 @@ class UserController extends AuthController
             'contactPerson1'=>$contactPerson1,'contactPerson2'=>$contactPerson2,'dateTime' =>$dateTime,
             'detail'=>$post['msg'],'groupSno'=>$groupSno,'entityType'=>$entityType);
 
-        $this->sendEmail('Contact Us',$body,$post['userEmail'],'Contact Us');
-        $this->sendEmailToAdmin('Contact Us from '.$post['userEmail'],$userDetail);
+        $repEmailData =  $this->model->getRepEmail($groupSno);
+        $repEmail = ( isset($repEmailData[0]['REP_EMAIL']) ? $repEmailData[0]['REP_EMAIL'] : '');
 
+        $this->sendEmail('Contact Us',$body,$post['userEmail'],'Contact Us');
+        $this->sendEmailToAdmin('Contact Us from '.$post['userEmail'],$userDetail,$repEmail);
 
         $response['code'] = '200';
         $this->setResponse($response);
@@ -982,7 +984,7 @@ class UserController extends AuthController
     public function actionGrouptransaction()
     {
         $post = Yii::$app->request->post();
-        if( empty($post['userCd']) || empty($post['groupSno']) )
+        if( empty($post['userCd']) || empty($post['groupSno']) || empty($post['fromDate']) || empty($post['toDate']) || empty($post['accountCode']) )
         {
             $response['code'] = '400';
             $this->setResponse($response);
@@ -995,7 +997,7 @@ class UserController extends AuthController
             $this->setResponse($response);
         }
 
-        $data = $this->model->getGroupTransactions($post['userCd'],$post['groupSno']);
+        $data = $this->model->getGroupTransactions($post['userCd'],$post['groupSno'],$post['fromDate'],$post['toDate'],$post['accountCode']);
         $response['code'] = '200';
         $response['data'] = $data;
         $this->setResponse($response);
@@ -1041,7 +1043,7 @@ class UserController extends AuthController
 
     public function actionTest()
     {
-        $body = $this->logoutMailBody('mohsin.hassan@tenpearls.com');
+        $body = $this->logoutMailBody();
         $this->sendEmail('Logout',$body,'mohsin.hassan@tenpearls.com','logout');
         exit;
         echo $uri = Yii::$app->params['REPORTS']['EXCEL_REPORT_PATH'];
