@@ -279,7 +279,7 @@ class AuthController extends ActiveController
             ->setTo($to)
             ->setSubject($subject." @ UBL Funds Partner Portal")
             //->addCc("sahmar@ublfunds.com")
-            ->addCc("mohsin.hassan@tenpearls.com")
+            //->addCc("mohsin.hassan@tenpearls.com")
             //->addCc("numrah.zafar@tenpearls.com")
             ->setBody($body, 'text/html');
 
