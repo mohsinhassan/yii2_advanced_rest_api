@@ -67,14 +67,22 @@ class UserController extends AuthController
 
         $ociLib = new OciLib();
         $c = $ociLib->ociConnect(Yii::$app->params['DB_USER'], Yii::$app->params['DB_PASS'], Yii::$app->params['DB_NAME']);
-
+        $myData = array();
         $response['data'] = $this->model->getCgtPre($post['custAccCode'],$post['planCode'],$post['unitType'],$post['typeValue'],$post['amount'],$post['unitPercent'],$post['unit'],$post['navDate'],$c);
-        if($response['data'] !== false)
+
+        for($i=0;$i<count($response['data']['FUND_CODE']);$i++)
+        {
+            $myData['data'][$i]['FUND_CODE'] = $response['data']['FUND_CODE'][$i];
+            $myData['data'][$i]['CG_AMOUNT'] = $response['data']['CG_AMOUNT'][$i];
+            $myData['data'][$i]['CGT'] = $response['data']['CGT'][$i];
+            $myData['data'][$i]['CGT_RATE']= $response['data']['CGT_RATE'][$i];
+        }
+        if($myData['data'] !== false)
         {
             $this->model->addLog("view_report",$post['groupCode']." view CGT pre report",$post['sessionSno']);
-            $response['code'] = "200";
+            $myData['code'] = "200";
         }
-        $this->setResponse($response);
+        $this->setResponse($myData);
     }
 
     public function actionCgtpost()
@@ -92,12 +100,19 @@ class UserController extends AuthController
         $c = $ociLib->ociConnect(Yii::$app->params['DB_USER'], Yii::$app->params['DB_PASS'], Yii::$app->params['DB_NAME']);
 
         $response['data'] = $this->model->getCgtPost($post['custAccCode'],$post['transactionSno'],$post['transactionType'],$c);
-        if($response['data'] !== false)
+        for($i=0;$i<count($response['data']['FUND_CODE']);$i++)
         {
-            $this->model->addLog("view_report",$post['groupCode']." view CGT post report",$post['sessionSno']);
-            $response['code'] = "200";
+            $myData['data'][$i]['FUND_CODE'] = $response['data']['FUND_CODE'][$i];
+            $myData['data'][$i]['CG_AMOUNT'] = $response['data']['CG_AMOUNT'][$i];
+            $myData['data'][$i]['CGT'] = $response['data']['CGT'][$i];
+            $myData['data'][$i]['CGT_RATE']= $response['data']['CGT_RATE'][$i];
         }
-        $this->setResponse($response);
+        if($myData['data'] !== false)
+        {
+            $this->model->addLog("view_report",$post['groupCode']." view CGT pre report",$post['sessionSno']);
+            $myData['code'] = "200";
+        }
+        $this->setResponse($myData);
     }
 
     public function actionCustomers_data()
@@ -576,20 +591,37 @@ class UserController extends AuthController
             $this->setResponse($response);
         }
         $userCd = $this->fetchUserCd();
+
         if(!$this->model->checkGroupSno($userCd,$post['groupSno']))
         {
             $response['code'] = '401';
             $this->setResponse($response);
         }
-
+        $data = 'DISTRIBUTOR_NAME,BRANCH_CODE,BRANCH_NAME,PLAN_NAME,FUND_NAME,PROCESS_DATE,CNIC,CUST_ACCT_CODE,CUST_ACCT_TITLE,HOLDING_UNITS,AUM,FEE_AMOUNT,AGREED_PERCENT,COMMISSION
+';
         $result = $this->model->getMfeecommrep($post['groupSno'],$post['fromDate'],$post['toDate']);
-        $this->requestToSavePdf($result);
 
-        if($result){
-            $response['code'] = "200";
-            $this->saveXlsToLocal($result);
+        foreach($result as $res)
+        {
+            $data .= $res['DISTRIBUTOR_NAME'].','.$res['BRANCH_CODE'].','.$res['BRANCH_NAME'].','.$res['PLAN_NAME'].','.$res['FUND_NAME'].','.
+            $res['PROCESS_DATE'].',="'.$res['CNIC'].'",'.$res['CUST_ACCT_CODE'].','.$res['CUST_ACCT_TITLE'].',="'.$res['HOLDING_UNITS'].'",="'.$res['AUM'].'",="'.$res['FEE_AMOUNT'].'",="'.$res['AGREED_PERCENT'].'",'.
+            $res['COMMISSION']."\r\n";
+
         }
-        else {
+
+        $fileName = "MFeeCommissionReport.csv";
+        $date = date("Ymdhis");
+
+        $save_to = "../../".Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName;
+
+        if(file_put_contents($save_to, $data))
+        {
+            $response['code'] = '200';
+            $response['url'] =  Yii::$app->params['REPORTS']['REPORT_PATH'].Yii::$app->params['REPORTS']['REPORT_FOLDER']."/".$date.$fileName;
+            $this->setResponse($response);
+        }
+        else
+        {
             $response['code'] = "403";
         }
         $this->setResponse($response);
@@ -622,8 +654,6 @@ class UserController extends AuthController
         }
         $this->setResponse($response);
     }
-
-
 
     protected function savePdfToLocal($result)
     {

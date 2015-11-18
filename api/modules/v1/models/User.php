@@ -56,8 +56,10 @@ class User extends ActiveRecord
             oci_execute($s);
 
             oci_execute($rc);
-            $row = oci_fetch_assoc($rc);
-            return $row;
+
+            oci_fetch_all($rc, $res);
+            return $res;
+
         } catch (Exception $e) {
             return  $e->getMessage();
         }
@@ -74,8 +76,9 @@ class User extends ActiveRecord
 
             oci_execute($s);
             oci_execute($rc);
-            $row = oci_fetch_assoc($rc);
-            return $row;
+
+            oci_fetch_all($rc, $res);
+            return $res;
         } catch (Exception $e) {
             return  $e->getMessage();
         }
@@ -774,14 +777,88 @@ class User extends ActiveRecord
     public function getMfeecommrep($groupSno,$fromDate,$toDate)
     {
         try{
-            $result = "";
-            $command = $this->connection->createCommand("call PKG_DP_REP.proc_get_MFEE_com(:P_GROUP_SNO, :P_FROM_DATE, :P_TO_DATE, :P_RESULT)");
-            $command->bindParam(':P_GROUP_SNO', $groupSno, PDO::PARAM_INT);
-            $command->bindParam(':P_FROM_DATE', $fromDate, PDO::PARAM_STR);
-            $command->bindParam(':P_TO_DATE', $toDate, PDO::PARAM_STR);
-            $command->bindParam(':P_RESULT', $result, PDO::PARAM_STR, 1000);
-            $command->execute();
-            return $result;
+            /*$sql = "SELECT  (SELECT G.GROUP_NAME FROM Pa_Sale_Entity_Group G WHERE G.GROUP_SNO = :P_GROUP_SNO) DISTRIBUTOR_NAME,
+                            E.SALE_ENTITY_CODE BRANCH_CODE,
+                            E.SALE_ENTITY_NAME BRANCH_NAME,
+                            P.PLAN_NAME,
+                            F.FUND_NAME,
+                            D.ENTRY_DATE PROCESS_DATE,
+                            C.CNIC ,
+                            CA.CUST_ACCT_CODE,
+                            CA.CUST_ACCT_TITLE,
+                            SUM(D.AUM) AUM,
+                            SUM(D.FEE_AMOUNT) FEE_AMOUNT,
+                            ''AGREED_PERCENT,
+                            ''COMMISSION
+                    FROM MVW_DISTRIBUTOR_DATA D ,PA_SALE_ENTITY E,PA_FUND F,PA_CUST_ACCT CA,PA_CUSTOMER C, PA_PLAN P
+                    WHERE  D.ENTRY_DATE BETWEEN :P_FROM_DATE AND :P_TO_DATE
+                    AND D.SALE_ENTITY_SNO = E.SALE_ENTITY_SNO
+                    AND   D.FUND_SNO = F.FUND_SNO
+                    AND   D.PLAN_SNO = P.PLAN_SNO
+                    AND   D.CUST_ACCT_SNO = CA.CUST_ACCT_SNO
+                    AND   CA.CUST_SNO = C.CUST_SNO
+
+                    AND Sale_Entity_Code IN (SELECT S.SALE_ENTITY_CODE FROM VW_GROUP_SALE_ENTITY S WHERE S.GROUP_SNO = :P_GROUP_SNO)
+                    GROUP BY E.SALE_ENTITY_CODE ,
+                            E.SALE_ENTITY_NAME ,
+                            P.PLAN_NAME,
+                            F.FUND_NAME,
+                            D.ENTRY_DATE ,
+                            C.CNIC ,
+                            CA.CUST_ACCT_CODE,
+                            CA.CUST_ACCT_TITLE
+
+                    ORDER BY
+                            D.ENTRY_DATE,
+                            DISTRIBUTOR_NAME,
+                            E.SALE_ENTITY_CODE,
+                            CA.CUST_ACCT_CODE,
+                            P.PLAN_NAME,
+                            F.FUND_NAME";*/
+            $sql = "SELECT  (SELECT G.GROUP_NAME FROM Pa_Sale_Entity_Group G WHERE G.GROUP_SNO = :P_GROUP_SNO) DISTRIBUTOR_NAME,
+                            E.SALE_ENTITY_CODE BRANCH_CODE,
+                            E.SALE_ENTITY_NAME BRANCH_NAME,
+                            P.PLAN_NAME,
+                            F.FUND_NAME,
+                            D.ENTRY_DATE PROCESS_DATE,
+                            C.CNIC ,
+                            CA.CUST_ACCT_CODE,
+                            CA.CUST_ACCT_TITLE,
+                            SUM(D.AUM) AUM,
+                            SUM(D.FEE_AMOUNT) FEE_AMOUNT,
+                            sum(d.holding_units) Holding_units,
+                            ''AGREED_PERCENT,
+                            ''COMMISSION
+                    FROM MVW_DISTRIBUTOR_DATA D ,PA_SALE_ENTITY E,PA_FUND F,PA_CUST_ACCT CA,PA_CUSTOMER C, PA_PLAN P
+                    WHERE  D.ENTRY_DATE BETWEEN :P_FROM_DATE AND :P_TO_DATE
+            AND D.SALE_ENTITY_SNO = E.SALE_ENTITY_SNO
+            AND   D.FUND_SNO = F.FUND_SNO
+            AND   D.PLAN_SNO = P.PLAN_SNO
+            AND   D.CUST_ACCT_SNO = CA.CUST_ACCT_SNO
+            AND   CA.CUST_SNO = C.CUST_SNO
+
+            AND Sale_Entity_Code IN (SELECT S.SALE_ENTITY_CODE FROM VW_GROUP_SALE_ENTITY S WHERE S.GROUP_SNO = :P_GROUP_SNO)
+                    GROUP BY E.SALE_ENTITY_CODE ,
+                            E.SALE_ENTITY_NAME ,
+                            P.PLAN_NAME,
+                            F.FUND_NAME,
+                            D.ENTRY_DATE ,
+                            C.CNIC ,
+                            CA.CUST_ACCT_CODE,
+                            CA.CUST_ACCT_TITLE
+                    ORDER BY
+                            D.ENTRY_DATE,
+                            DISTRIBUTOR_NAME,
+                            E.SALE_ENTITY_CODE,
+                            CA.CUST_ACCT_CODE,
+                            P.PLAN_NAME,
+                            F.FUND_NAME";
+            $command = $this->connection->createCommand($sql);
+            $command->bindValue("P_GROUP_SNO",$groupSno);
+            $command->bindValue("P_FROM_DATE",$fromDate);
+            $command->bindValue("P_TO_DATE",$toDate);
+            $res = $command->queryAll();
+            return $res;
         }
         catch (Exception $e) {
             return  $e->getMessage();
